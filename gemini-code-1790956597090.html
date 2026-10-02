@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Анимированный Робо-Гусь с прорисовкой</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #12141a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            overflow: hidden;
+            background: #191c24;
+        }
+
+        canvas {
+            display: block;
+            background: #191c24;
+        }
+
+        .btn-reset {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+            background: #282d37;
+            border: 2px solid #00c8ff;
+            border-radius: 10px;
+            cursor: pointer;
+            display: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-reset:active {
+            transform: translateX(-50%) scale(0.95);
+            background: #00c8ff;
+            color: #12141a;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="appCanvas" width="450" height="650"></canvas>
+        <button id="resetBtn" class="btn-reset">Заблокировать</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById('appCanvas');
+    const ctx = canvas.getContext('2d');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const WIDTH = 450;
+    const HEIGHT = 650;
+
+    let state = "LOCK"; // "LOCK" или "ROBOT"
+    let isDrawing = false;
+    let pattern = [];
+    let currentPos = { x: 0, y: 0 };
+
+    // Время и прогресс анимации вырисовывания (0.0 -> 1.0)
+    let animTime = 0;
+    let drawProgress = 0;
+
+    // Сетка ключа 3x3
+    const gridOffsetY = 320;
+    const spacing = 100;
+    const nodes = {};
+
+    let idx = 1;
+    for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+            nodes[idx] = {
+                x: WIDTH / 2 + (col - 1) * spacing,
+                y: gridOffsetY + (row - 1) * spacing
+            };
+            idx++;
+        }
+    }
+
+    const validPatterns = [
+        [7, 4, 1, 2, 3],
+        [3, 2, 1, 4, 7],
+        [7, 1, 3],
+        [3, 1, 7]
+    ];
+
+    // --- ЭКРАН БЛОКИРОВКИ ---
+    function drawLockScreen(t) {
+        ctx.fillStyle = "#191c24";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#00c8ff";
+        ctx.font = "bold 24px sans-serif";
+        ctx.fillText("Нарисуйте букву 'Г'", WIDTH / 2, 90);
+
+        ctx.fillStyle = "#78828c";
+        ctx.font = "18px sans-serif";
+        ctx.fillText("на графическом ключе", WIDTH / 2, 125);
+
+        // Пульсирующие линии пройденного пути
+        if (pattern.length > 1) {
+            ctx.beginPath();
+            ctx.strokeStyle = "#00c8ff";
+            ctx.lineWidth = 8 + Math.sin(t * 5) * 1.5;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.moveTo(nodes[pattern[0]].x, nodes[pattern[0]].y);
+            for (let i = 1; i < pattern.length; i++) {
+                ctx.lineTo(nodes[pattern[i]].x, nodes[pattern[i]].y);
+            }
+            ctx.stroke();
+        }
+
+        // Динамическая линия за пальцем
+        if (isDrawing && pattern.length > 0) {
+            const lastNode = nodes[pattern[pattern.length - 1]];
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(0, 200, 255, 0.6)";
+            ctx.lineWidth = 4;
+            ctx.moveTo(lastNode.x, lastNode.y);
+            ctx.lineTo(currentPos.x, currentPos.y);
+            ctx.stroke();
+        }
+
+        // Узлы
+        for (let id in nodes) {
+            const node = nodes[id];
+            const isSelected = pattern.includes(parseInt(id));
+            const pulse = isSelected ? Math.sin(t * 6) * 2 : 0;
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, (isSelected ? 24 : 20) + pulse, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? "#00c8ff" : "#282d37";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, isSelected ? 10 : 6, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? "#ffffff" : "#78828c";
+            ctx.fill();
+        }
+    }
+
+    // --- Вспомогательная функция для прорисовки контура пути ---
+    function strokePathProgress(pathFn, approxLength, progress, strokeColor, lineWidth) {
+        if (progress <= 0) return;
+        ctx.save();
+        ctx.beginPath();
+        pathFn();
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        if (progress < 1) {
+            ctx.setLineDash([approxLength, approxLength]);
+            ctx.lineDashOffset = approxLength * (1 - progress);
+        } else {
+            ctx.setLineDash([]);
+        }
+
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // Вспомогательная функция для закругленного прямоугольника
+    function makeRoundedRectPath(x, y, w, h, r) {
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    // --- РОБО-ГУСЬ С ПОШАГОВОЙ ПРОРИСОВКОЙ КОНТУРОВ ---
+    function drawRobotGoose(t, prog) {
+        ctx.fillStyle = "#191c24";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        const cx = WIDTH / 2;
+        const cy = HEIGHT / 2 - 20;
+
+        // Расчет фаз вырисовывания (0.0 -> 1.0)
+        const pAntenna = Math.min(1, Math.max(0, prog / 0.2));          // 0.0 .. 0.2
+        const pHead    = Math.min(1, Math.max(0, (prog - 0.15) / 0.35)); // 0.15 .. 0.5
+        const pScreen  = Math.min(1, Math.max(0, (prog - 0.45) / 0.25)); // 0.45 .. 0.7
+        const pGoose   = Math.min(1, Math.max(0, (prog - 0.65) / 0.25)); // 0.65 .. 0.9
+        const pFills   = Math.min(1, Math.max(0, (prog - 0.85) / 0.15)); // 0.85 .. 1.0 (заливка цветом)
+
+        // 1. АНТЕННА
+        strokePathProgress(() => {
+            ctx.moveTo(cx, cy - 140);
+            ctx.lineTo(cx, cy - 190);
+        }, 50, pAntenna, "#78828c", 6);
+
+        if (pAntenna > 0.5) {
+            const lightGlow = prog >= 1 ? (Math.sin(t * 6) * 0.5 + 0.5) : 0;
+            const bulbScale = Math.min(1, (pAntenna - 0.5) * 2);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy - 195, (14 + lightGlow * 6) * bulbScale, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 60, 60, ${0.3 + lightGlow * 0.4})`;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy - 195, 12 * bulbScale, 0, Math.PI * 2);
+            ctx.fillStyle = "#ff3c3c";
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 2. УШИ
+        if (pHead > 0.2) {
+            strokePathProgress(() => makeRoundedRectPath(cx - 160, cy - 30, 20, 60, 5), 160, pHead, "#282d37", 3);
+            strokePathProgress(() => makeRoundedRectPath(cx + 140, cy - 30, 20, 60, 5), 160, pHead, "#282d37", 3);
+
+            if (pFills > 0) {
+                ctx.save();
+                ctx.globalAlpha = pFills;
+                ctx.fillStyle = "#282d37";
+                ctx.beginPath(); makeRoundedRectPath(cx - 160, cy - 30, 20, 60, 5); ctx.fill();
+                ctx.beginPath(); makeRoundedRectPath(cx + 140, cy - 30, 20, 60, 5); ctx.fill();
+
+                const ledAlpha = prog >= 1 && Math.sin(t * 4) > 0 ? 1 : 0.3;
+                ctx.fillStyle = `rgba(50, 225, 100, ${ledAlpha})`;
+                ctx.beginPath();
+                ctx.arc(cx - 150, cy, 5, 0, Math.PI * 2);
+                ctx.arc(cx + 150, cy, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // 3. КОНТУР ГОЛОВЫ РОБОТА
+        strokePathProgress(() => makeRoundedRectPath(cx - 140, cy - 140, 280, 260, 25), 1050, pHead, "#00c8ff", 4);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#bec8d2";
+            ctx.beginPath(); makeRoundedRectPath(cx - 140, cy - 140, 280, 260, 25); ctx.fill();
+
+            // Обводка корпуса после заливки
+            ctx.strokeStyle = "#78828c";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Винтики
+            const screws = [
+                [cx - 120, cy - 120], [cx + 120, cy - 120],
+                [cx - 120, cy + 100], [cx + 120, cy + 100]
+            ];
+            screws.forEach(([sx, sy]) => {
+                ctx.beginPath();
+                ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+                ctx.fillStyle = "#282d37";
+                ctx.fill();
+            });
+            ctx.restore();
+        }
+
+        // 4. ДИСПЛЕЙ
+        strokePathProgress(() => makeRoundedRectPath(cx - 110, cy - 90, 220, 170, 15), 750, pScreen, "#00c8ff", 3);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#0f141e";
+            ctx.beginPath(); makeRoundedRectPath(cx - 110, cy - 90, 220, 170, 15); ctx.fill();
+            ctx.restore();
+        }
+
+        // 5. ГУСЬ ВНУТРИ
+        const headWobble = prog >= 1 ? Math.sin(t * 3) * 3 : 0;
+        const honkOpen   = prog >= 1 ? Math.max(0, Math.sin(t * 5)) * 12 : 0;
+
+        const gx = cx - 20 + headWobble;
+        const gy = cy - 20;
+
+        // Контуры шеи, головы и клюва
+        strokePathProgress(() => {
+            ctx.moveTo(cx - 30, cy + 80);
+            ctx.lineTo(cx + 10, cy + 80);
+            ctx.lineTo(cx + 5 + headWobble, cy - 10);
+            ctx.lineTo(cx - 35 + headWobble, cy - 10);
+            ctx.closePath();
+        }, 300, pGoose, "#ffffff", 3);
+
+        strokePathProgress(() => {
+            ctx.arc(gx, gy, 30, 0, Math.PI * 2);
+        }, 200, pGoose, "#ffffff", 3);
+
+        strokePathProgress(() => {
+            ctx.moveTo(gx + 15, gy - 8);
+            ctx.lineTo(gx + 75, gy + 5);
+            ctx.lineTo(gx + 15, gy + 20 + honkOpen);
+            ctx.closePath();
+        }, 200, pGoose, "#ff8c00", 3);
+
+        // Заливка гуся после прорисовки контура
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+
+            // Шея
+            ctx.beginPath();
+            ctx.fillStyle = "#ffffff";
+            ctx.moveTo(cx - 30, cy + 80);
+            ctx.lineTo(cx + 10, cy + 80);
+            ctx.lineTo(cx + 5 + headWobble, cy - 10);
+            ctx.lineTo(cx - 35 + headWobble, cy - 10);
+            ctx.closePath();
+            ctx.fill();
+
+            // Голова
+            ctx.beginPath();
+            ctx.arc(gx, gy, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Клюв верхний
+            ctx.beginPath();
+            ctx.fillStyle = "#ff8c00";
+            ctx.moveTo(gx + 15, gy - 8);
+            ctx.lineTo(gx + 75, gy + 5);
+            ctx.lineTo(gx + 15, gy + 12);
+            ctx.closePath();
+            ctx.fill();
+
+            // Клюв нижний
+            ctx.beginPath();
+            ctx.fillStyle = "#e07b00";
+            ctx.moveTo(gx + 15, gy + 12);
+            ctx.lineTo(gx + 70, gy + 15 + honkOpen);
+            ctx.lineTo(gx + 15, gy + 20 + honkOpen);
+            ctx.closePath();
+            ctx.fill();
+
+            // Глаз
+            ctx.beginPath();
+            ctx.arc(gx - 5, gy - 10, 5, 0, Math.PI * 2);
+            ctx.fillStyle = "#000000";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(gx - 7, gy - 12, 2, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            // Бровь
+            ctx.beginPath();
+            ctx.strokeStyle = "#000000";
+            ctx.lineWidth = 3;
+            ctx.moveTo(gx - 15, gy - 20);
+            ctx.lineTo(gx + 5, gy - 15);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // 6. ОБЛАЧКО "HONK!" И ЗАГОЛОВОК
+        if (pFills > 0.5) {
+            const honkScale = prog >= 1 ? (1 + Math.sin(t * 5) * 0.12) : (pFills - 0.5) * 2;
+            const bubbleX = cx + 55;
+            const bubbleY = cy - 65 + (prog >= 1 ? Math.sin(t * 5) * -4 : 0);
+
+            ctx.save();
+            ctx.translate(bubbleX, bubbleY);
+            ctx.scale(honkScale, honkScale);
+
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 42, 20, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 16px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("HONK!", 0, 6);
+            ctx.restore();
+
+            // Заголовок
+            ctx.fillStyle = `rgba(0, 200, 255, ${pFills})`;
+            ctx.font = "bold 22px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("РОБО-ГУСЬ АКТИВИРОВАН", WIDTH / 2, HEIGHT - 100);
+        }
+    }
+
+    // --- ОБРАБОТКА ВВОДА ---
+    function getPointerPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+    }
+
+    function checkNodeCollision(pos) {
+        for (let id in nodes) {
+            const node = nodes[id];
+            const dist = Math.hypot(node.x - pos.x, node.y - pos.y);
+            const numId = parseInt(id);
+            if (dist < 35 && !pattern.includes(numId)) {
+                pattern.push(numId);
+            }
+        }
+    }
+
+    function isPatternValid() {
+        return validPatterns.some(valid => 
+            valid.length === pattern.length && 
+            valid.every((val, index) => val === pattern[index])
+        );
+    }
+
+    function handleStart(e) {
+        if (state !== "LOCK") return;
+        isDrawing = true;
+        pattern = [];
+        currentPos = getPointerPos(e);
+        checkNodeCollision(currentPos);
+    }
+
+    function handleMove(e) {
+        if (state !== "LOCK" || !isDrawing) return;
+        currentPos = getPointerPos(e);
+        checkNodeCollision(currentPos);
+    }
+
+    function handleEnd() {
+        if (state !== "LOCK" || !isDrawing) return;
+        isDrawing = false;
+        if (isPatternValid()) {
+            state = "ROBOT";
+            drawProgress = 0; // Начать прорисовку с нуля
+            resetBtn.style.display = "block";
+        } else {
+            pattern = [];
+        }
+    }
+
+    canvas.addEventListener('mousedown', handleStart);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); });
+    window.addEventListener('touchmove', (e) => { handleMove(e); });
+    window.addEventListener('touchend', handleEnd);
+
+    resetBtn.addEventListener('click', () => {
+        state = "LOCK";
+        pattern = [];
+        drawProgress = 0;
+        resetBtn.style.display = "none";
+    });
+
+    // --- ГЛАВНЫЙ ЦИКЛ (60 FPS) ---
+    function gameLoop() {
+        animTime += 0.03;
+
+        if (state === "LOCK") {
+            drawLockScreen(animTime);
+        } else if (state === "ROBOT") {
+            // Плавный прирост прогресса прорисовки
+            if (drawProgress < 1) {
+                drawProgress += 0.009; // Скорость прорисовки
+                if (drawProgress > 1) drawProgress = 1;
+            }
+            drawRobotGoose(animTime, drawProgress);
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
+
+</body>
+</html>
