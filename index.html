@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Летающий Тобот-Гусь, Тобот-Курочка и Интеграция Птица-Титан</title>
+    <title>Тобот-Гусь, Тобот-Курочка (Плимутрьок) и Интеграция Птица-Титан</title>
     <style>
         * {
             box-sizing: border-box;
@@ -102,7 +102,6 @@
         }
     }
 
-    // Буква Г (Гусь)
     const goosePatterns = [
         [7, 4, 1, 2, 3],
         [3, 2, 1, 4, 7],
@@ -110,7 +109,6 @@
         [3, 1, 7]
     ];
 
-    // Буква К (Курочка)
     const chickenPatterns = [
         [1, 4, 7, 5, 3],
         [1, 4, 7, 5, 9],
@@ -120,7 +118,6 @@
         [3, 5, 1, 4, 7]
     ];
 
-    // Буква П (Интеграция: Гусь + Курочка = Птица-Титан)
     const titanPatterns = [
         [7, 4, 1, 2, 3, 6, 9],
         [9, 6, 3, 2, 1, 4, 7],
@@ -185,7 +182,6 @@
         }
     }
 
-    // --- Вспомогательная прорисовка линий ---
     function strokePathProgress(pathFn, approxLength, progress, strokeColor, lineWidth) {
         if (progress <= 0) return;
         ctx.save();
@@ -207,7 +203,25 @@
         ctx.restore();
     }
 
-    // --- ТОБОТ-ГУСЬ (ЛЕТАЮЩИЙ) ---
+    // Вспомогательная функция рисования черно-белых пестрых полос Плимутрока
+    function drawBarredFeathersPattern(x1, y1, x2, y2, stripeCount, strokeWidth) {
+        ctx.save();
+        ctx.lineWidth = strokeWidth;
+        for (let i = 0; i < stripeCount; i++) {
+            const ratio = i / stripeCount;
+            const px = x1 + (x2 - x1) * ratio;
+            const py = y1 + (y2 - y1) * ratio;
+
+            ctx.beginPath();
+            ctx.strokeStyle = (i % 2 === 0) ? "#ffffff" : "#111318";
+            ctx.moveTo(px - 15, py - 4);
+            ctx.lineTo(px + 15, py + 4);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // --- ТОБОТ-ГУСЬ ---
     function drawRobotGoose(t, prog) {
         ctx.fillStyle = "#191c24";
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -468,7 +482,7 @@
         }
     }
 
-    // --- ТОБОТ-КУРОЧКА ПЛИМУТРОК ---
+    // --- ТОБОТ-КУРОЧКА (ПЛИМУТРОК: КОНТРАСТНЫЙ ЧЕРНО-БЕЛЫЙ УЗОР) ---
     function drawRobotChicken(t, prog) {
         ctx.fillStyle = "#191c24";
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -485,6 +499,7 @@
         const pChick  = Math.min(1, Math.max(0, (prog - 0.65) / 0.25));
         const pFills  = Math.min(1, Math.max(0, (prog - 0.85) / 0.15));
 
+        // Огни из сопел
         if (pFills > 0.5) {
             const flameH = 16 + Math.sin(t * 18) * 6;
             ctx.save();
@@ -519,6 +534,7 @@
             ctx.restore();
         }
 
+        // Хвост
         const drawChickenTail = () => {
             ctx.moveTo(cx - 110, cy - 30);
             ctx.lineTo(cx - 150, cy - 110);
@@ -532,15 +548,11 @@
         if (pFills > 0) {
             ctx.save();
             ctx.globalAlpha = pFills;
-            ctx.fillStyle = "#1b1d22";
+            ctx.fillStyle = "#15171c";
             ctx.beginPath(); drawChickenTail(); ctx.fill();
 
-            ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(cx - 140, cy - 105); ctx.lineTo(cx - 105, cy - 65);
-            ctx.moveTo(cx - 130, cy - 85);  ctx.lineTo(cx - 95, cy - 45);
-            ctx.stroke();
+            // Чёрно-белые полосы хвоста
+            drawBarredFeathersPattern(cx - 145, cy - 100, cx - 90, cy - 50, 6, 4);
 
             ctx.strokeStyle = "#ffffff";
             ctx.lineWidth = 2;
@@ -548,6 +560,7 @@
             ctx.restore();
         }
 
+        // ТЕЛО (Основа Плимутрока)
         const drawChickenBody = () => {
             ctx.moveTo(cx - 120, cy - 40);
             ctx.quadraticCurveTo(cx - 30, cy - 75, cx + 50, cy - 50);
@@ -563,16 +576,12 @@
         if (pFills > 0) {
             ctx.save();
             ctx.globalAlpha = pFills;
-            ctx.fillStyle = "#22252b";
+            ctx.fillStyle = "#181a20";
             ctx.beginPath(); drawChickenBody(); ctx.fill();
 
-            ctx.strokeStyle = "#e2e5ec";
-            ctx.lineWidth = 4;
-            for (let y = cy - 60; y <= cy + 100; y += 14) {
-                ctx.beginPath();
-                ctx.moveTo(cx - 100, y);
-                ctx.quadraticCurveTo(cx, y + 8, cx + 90, y - 4);
-                ctx.stroke();
+            // Густой чёрно-белый полосатый узор по всему телу
+            for (let y = cy - 55; y <= cy + 95; y += 12) {
+                drawBarredFeathersPattern(cx - 95, y, cx + 80, y - 2, 7, 3);
             }
 
             ctx.strokeStyle = "#ffffff";
@@ -581,6 +590,7 @@
             ctx.restore();
         }
 
+        // Крыло с поперечными черными и белыми полосками
         const drawChickenWing = () => {
             ctx.beginPath();
             ctx.ellipse(cx - 10, cy + 25, 65, 42, 0.2, 0, Math.PI * 2);
@@ -589,16 +599,11 @@
         if (pFills > 0) {
             ctx.save();
             ctx.globalAlpha = pFills;
-            ctx.fillStyle = "#181a1f";
+            ctx.fillStyle = "#111317";
             drawChickenWing(); ctx.fill();
 
-            ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = 4;
-            for (let i = -30; i <= 30; i += 15) {
-                ctx.beginPath();
-                ctx.moveTo(cx - 50, cy + 20 + i);
-                ctx.lineTo(cx + 30, cy + 25 + i);
-                ctx.stroke();
+            for (let y = cy - 10; y <= cy + 60; y += 10) {
+                drawBarredFeathersPattern(cx - 65, y, cx + 45, y + 5, 5, 3.5);
             }
 
             ctx.strokeStyle = "#ff2244";
@@ -607,6 +612,7 @@
             ctx.restore();
         }
 
+        // Экранчик
         const drawChickenScreen = () => {
             ctx.moveTo(cx - 45, cy - 15);
             ctx.lineTo(cx + 45, cy - 15);
@@ -628,6 +634,7 @@
             ctx.restore();
         }
 
+        // Голова и Клюв
         const headBobbing = prog >= 1 ? Math.sin(t * 7) * 4 : 0;
         const cluckOpen   = prog >= 1 ? Math.max(0, Math.sin(t * 6)) * 10 : 0;
 
@@ -656,26 +663,30 @@
             ctx.save();
             ctx.globalAlpha = pFills;
 
+            // Шея
             ctx.beginPath();
-            ctx.fillStyle = "#22252b";
+            ctx.fillStyle = "#1d2026";
             ctx.moveTo(cx + 30, cy - 40);
             ctx.lineTo(kx - 10, ky + 10);
             ctx.lineTo(kx + 15, ky + 10);
             ctx.lineTo(cx + 60, cy - 30);
             ctx.fill();
 
+            // Голова с легкой меланжевой пестротой
             ctx.beginPath();
             ctx.arc(kx, ky, 24, 0, Math.PI * 2);
-            ctx.fillStyle = "#dcdfe6";
+            ctx.fillStyle = "#282c35";
             ctx.fill();
 
-            ctx.strokeStyle = "#1b1d22";
-            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(kx - 12, ky - 4); ctx.lineTo(kx, ky - 4);
-            ctx.moveTo(kx - 14, ky + 4); ctx.lineTo(kx - 2, ky + 4);
+            ctx.moveTo(kx - 15, ky - 10); ctx.lineTo(kx - 5, ky - 10);
+            ctx.moveTo(kx - 18, ky);      ctx.lineTo(kx - 8, ky);
+            ctx.moveTo(kx - 12, ky + 10); ctx.lineTo(kx - 2, ky + 10);
             ctx.stroke();
 
+            // Ярко-красный гребень Плимутрока
             ctx.beginPath();
             ctx.fillStyle = "#ff1a3c";
             ctx.moveTo(kx - 16, ky - 18);
@@ -687,12 +698,14 @@
             ctx.closePath();
             ctx.fill();
 
+            // Ярко-красные сережки
             ctx.beginPath();
             ctx.fillStyle = "#ff1a3c";
             ctx.ellipse(kx + 8, ky + 24, 7, 12, -0.2, 0, Math.PI * 2);
             ctx.ellipse(kx + 18, ky + 22, 6, 10, 0.2, 0, Math.PI * 2);
             ctx.fill();
 
+            // Желтый клюв
             ctx.beginPath();
             ctx.fillStyle = "#ffcc00";
             ctx.moveTo(kx + 12, ky - 4);
@@ -709,6 +722,7 @@
             ctx.closePath();
             ctx.fill();
 
+            // Глаз
             ctx.beginPath();
             ctx.arc(kx - 2, ky - 6, 6, 0, Math.PI * 2);
             ctx.fillStyle = "#ff1a3c";
@@ -743,13 +757,13 @@
             ctx.restore();
 
             ctx.fillStyle = `rgba(255, 34, 68, ${pFills})`;
-            ctx.font = "bold 20px sans-serif";
+            ctx.font = "bold 18px sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("ТОБОТ-КУРОЧКА АКТИВИРОВАНА", WIDTH / 2, HEIGHT - 90);
+            ctx.fillText("ТОБОТ-КУРОЧКА (ПЛИМУТРОК)", WIDTH / 2, HEIGHT - 90);
         }
     }
 
-    // --- ИНТЕГРАЦИЯ: ПТИЦА-ТИТАН (ГУСЬ + КУРОЧКА) ---
+    // --- ИНТЕГРАЦИЯ: ПТИЦА-ТИТАН (ГУСЬ + ЧЕРНО-БЕЛАЯ КУРОЧКА) ---
     function drawRobotTitan(t, prog) {
         ctx.fillStyle = "#0f121a";
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -765,7 +779,7 @@
         const pChick  = Math.min(1, Math.max(0, (prog - 0.6) / 0.25));
         const pFills  = Math.min(1, Math.max(0, (prog - 0.8) / 0.2));
 
-        // 1. ДВОЙНЫЕ РЕАКТИВНЫЕ СОПЛА (Оранжевый + Красный)
+        // 1. ДВОЙНЫЕ РЕАКТИВНЫЕ СОПЛА
         if (pFills > 0.5) {
             const flameH = 22 + Math.sin(t * 18) * 8;
             ctx.save();
@@ -809,19 +823,14 @@
             ctx.save();
             ctx.globalAlpha = pFills;
             
-            ctx.fillStyle = "#222630";
+            ctx.fillStyle = "#1e222b";
             drawTitanWings('left'); ctx.fill();
             drawTitanWings('right'); ctx.fill();
 
-            // Полосы Плимутрока на крыльях
-            ctx.strokeStyle = "#e2e5ec";
-            ctx.lineWidth = 3;
+            // Контрастные черно-белые полосы Плимутрока на крыльях Титана
             [-1, 1].forEach(dir => {
-                for (let i = -40; i <= 30; i += 18) {
-                    ctx.beginPath();
-                    ctx.moveTo(cx + dir * 90, cy + i);
-                    ctx.lineTo(cx + dir * 150, cy + i - 15);
-                    ctx.stroke();
+                for (let y = cy - 60; y <= cy + 40; y += 16) {
+                    drawBarredFeathersPattern(cx + dir * 85, y, cx + dir * 155, y - 10, 5, 3.5);
                 }
             });
 
@@ -832,7 +841,7 @@
             ctx.restore();
         }
 
-        // 3. ТИТАНОВЫЙ КОРПУС С ПАНЕЛЯМИ ОБОИХ ТОБОТОВ
+        // 3. ТИТАНОВЫЙ КОРПУС С ЭЛЕМЕНТАМИ ЧЕРНО-БЕЛОЙ КУРОЧКИ
         const drawTitanBody = () => {
             ctx.moveTo(cx - 75, cy - 70);
             ctx.lineTo(cx + 75, cy - 70);
@@ -848,16 +857,12 @@
         if (pFills > 0) {
             ctx.save();
             ctx.globalAlpha = pFills;
-            ctx.fillStyle = "#2e3440";
+            ctx.fillStyle = "#282c35";
             ctx.beginPath(); drawTitanBody(); ctx.fill();
 
-            // Декор Курочки
-            ctx.strokeStyle = "#ff2244";
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(cx - 50, cy + 80); ctx.lineTo(cx - 20, cy + 100);
-            ctx.moveTo(cx + 50, cy + 80); ctx.lineTo(cx + 20, cy + 100);
-            ctx.stroke();
+            // Пестрый узор на теле Титана
+            drawBarredFeathersPattern(cx - 50, cy + 60, cx + 50, cy + 60, 6, 3.5);
+            drawBarredFeathersPattern(cx - 55, cy + 80, cx + 55, cy + 80, 6, 3.5);
 
             ctx.strokeStyle = "#ffffff";
             ctx.lineWidth = 3;
@@ -865,7 +870,7 @@
             ctx.restore();
         }
 
-        // 4. ДВУХЦВЕТНЫЙ ИНТЕГРАЦИОННЫЙ РЕАКТОР В ГРУДИ
+        // 4. ДВУХЦВЕТНЫЙ ИНТЕГРАЦИОННЫЙ РЕАКТОР
         const drawTitanReactor = () => {
             ctx.moveTo(cx, cy - 45);
             ctx.lineTo(cx + 40, cy - 10);
@@ -885,13 +890,13 @@
 
             const pulse = Math.sin(t * 6) * 0.2 + 0.8;
             
-            // Левая половина - голубая (Гусь)
+            // Голубое свечение (Гусь)
             ctx.fillStyle = `rgba(0, 200, 255, ${pulse})`;
             ctx.beginPath();
             ctx.arc(cx - 8, cy - 2, 14, 0, Math.PI * 2);
             ctx.fill();
 
-            // Правая половина - красная (Курочка)
+            // Красное свечение (Курочка)
             ctx.fillStyle = `rgba(255, 34, 68, ${pulse})`;
             ctx.beginPath();
             ctx.arc(cx + 8, cy - 2, 14, 0, Math.PI * 2);
@@ -903,14 +908,13 @@
             ctx.restore();
         }
 
-        // 5. ДЛИННАЯ ШЕЯ ГУСЯ + ГРЕБЕНЬ И КЛЮВ КУРОЧКИ
+        // 5. ДЛИННАЯ БЕЛАЯ ШЕЯ ГУСЯ + КРАСНЫЙ ГРЕБЕНЬ И КЛЮВ
         const headWobble = prog >= 1 ? Math.sin(t * 3.5) * 4 : 0;
         const honkOpen   = prog >= 1 ? Math.max(0, Math.sin(t * 5.5)) * 12 : 0;
 
         const gx = cx + headWobble;
         const gy = cy - 100;
 
-        // Длинная шея
         strokePathProgress(() => {
             ctx.moveTo(cx - 20, cy - 70);
             ctx.lineTo(gx - 15, gy + 20);
@@ -919,7 +923,6 @@
             ctx.closePath();
         }, 250, pChick, "#ffffff", 3);
 
-        // Голова
         strokePathProgress(() => {
             ctx.arc(gx, gy, 28, 0, Math.PI * 2);
         }, 180, pChick, "#ffffff", 3);
@@ -928,7 +931,7 @@
             ctx.save();
             ctx.globalAlpha = pFills;
 
-            // Заливка шеи
+            // Белоснежная шея гуся
             ctx.beginPath();
             ctx.fillStyle = "#e5e9f0";
             ctx.moveTo(cx - 20, cy - 70);
@@ -938,13 +941,13 @@
             ctx.closePath();
             ctx.fill();
 
-            // Заливка головы
+            // Голова
             ctx.beginPath();
             ctx.arc(gx, gy, 28, 0, Math.PI * 2);
             ctx.fillStyle = "#ffffff";
             ctx.fill();
 
-            // Красный гребень Курочки
+            // Ярко-красный гребень Плимутрока
             ctx.beginPath();
             ctx.fillStyle = "#ff1a3c";
             ctx.moveTo(gx - 18, gy - 22);
@@ -955,7 +958,7 @@
             ctx.closePath();
             ctx.fill();
 
-            // Красная бородка
+            // Ярко-красная бородка
             ctx.beginPath();
             ctx.fillStyle = "#ff1a3c";
             ctx.ellipse(gx + 10, gy + 22, 6, 12, -0.2, 0, Math.PI * 2);
@@ -970,7 +973,6 @@
             ctx.closePath();
             ctx.fill();
 
-            // Нижняя челюсть клюва
             ctx.beginPath();
             ctx.fillStyle = "#d08770";
             ctx.moveTo(gx + 12, gy + 12);
@@ -979,7 +981,7 @@
             ctx.closePath();
             ctx.fill();
 
-            // Глаз тобота
+            // Глаз
             ctx.beginPath();
             ctx.arc(gx - 4, gy - 8, 6, 0, Math.PI * 2);
             ctx.fillStyle = "#1e222a";
@@ -1092,7 +1094,6 @@
         }
     }
 
-    // Клавиатурный ввод Г, К и П
     window.addEventListener('keydown', (e) => {
         const key = e.key.toLowerCase();
         if (key === 'g' || key === 'г') {
