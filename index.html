@@ -2,363 +2,869 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Чертеж Тобота</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Летающий Тобот-Гусь и Тобот-Курочка</title>
     <style>
         * {
             box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
         }
+
         body {
-            background-color: #080c14;
-            color: #58a6ff;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #12141a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            margin: 0;
-            user-select: none;
-        }
-
-        /* Экран разблокировки (Модальное окно из скриншота) */
-        .lock-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(5, 8, 15, 0.85);
-            backdrop-filter: blur(8px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-            transition: opacity 0.3s ease;
-        }
-
-        .lock-card {
-            background: #121824;
-            border: 1px solid #1e2638;
-            border-radius: 20px;
-            width: 340px;
-            padding: 35px 25px 40px 25px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-
-        .lock-title {
-            color: #00bfff;
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-
-        .lock-subtitle {
-            color: #6e7681;
-            font-size: 15px;
-            margin-bottom: 30px;
-        }
-
-        #pattern-canvas {
+            overflow: hidden;
             touch-action: none;
+        }
+
+        #canvas-container {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            overflow: hidden;
+            background: #191c24;
+        }
+
+        canvas {
+            display: block;
+            background: #191c24;
+        }
+
+        .btn-reset {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+            background: #282d37;
+            border: 2px solid #00c8ff;
+            border-radius: 10px;
             cursor: pointer;
+            display: none;
+            transition: all 0.2s ease;
         }
 
-        /* Основной интерфейс */
-        .app-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-
-        #blueprint {
-            border: 2px solid #1e2638;
-            background: #011627;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .controls {
-            display: flex;
-            gap: 12px;
-        }
-
-        button {
-            background: #161b22;
-            color: #58a6ff;
-            border: 1px solid #30363d;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        button:hover {
-            background: #21262d;
-            border-color: #58a6ff;
-            color: #79c0ff;
+        .btn-reset:active {
+            transform: translateX(-50%) scale(0.95);
+            background: #00c8ff;
+            color: #12141a;
         }
     </style>
 </head>
 <body>
 
-    <!-- Модальный экран графического ключа -->
-    <div class="lock-overlay" id="lockScreen">
-        <div class="lock-card">
-            <div class="lock-title" id="lockTitle">Нарисуйте букву 'Г'</div>
-            <div class="lock-subtitle">на графическом ключе</div>
-            <canvas id="pattern-canvas" width="240" height="240"></canvas>
-        </div>
+    <div id="canvas-container">
+        <canvas id="appCanvas" width="450" height="650"></canvas>
+        <button id="resetBtn" class="btn-reset">Заблокировать</button>
     </div>
 
-    <!-- Основная часть с чертежом -->
-    <div class="app-container">
-        <h1 id="bot-title" style="margin: 0; font-size: 24px;">Чертеж Тобота</h1>
-        <canvas id="blueprint" width="600" height="450"></canvas>
-        <div class="controls">
-            <button onclick="openLock('G')">Ввести ключ для Гуся (Г)</button>
-            <button onclick="openLock('K')">Ввести ключ для Курочки (К)</button>
-        </div>
-    </div>
+<script>
+    const canvas = document.getElementById('appCanvas');
+    const ctx = canvas.getContext('2d');
+    const resetBtn = document.getElementById('resetBtn');
 
-    <script>
-        // Элементы
-        const lockScreen = document.getElementById('lockScreen');
-        const lockTitle = document.getElementById('lockTitle');
-        const canvas = document.getElementById('blueprint');
-        const ctx = canvas.getContext('2d');
-        const title = document.getElementById('bot-title');
+    const WIDTH = 450;
+    const HEIGHT = 650;
 
-        let targetMode = 'G'; // 'G' или 'K'
-        let currentMode = 'G';
+    let state = "LOCK"; // "LOCK" или "ROBOT"
+    let activeRobot = "GOOSE"; // "GOOSE" или "CHICKEN"
+    let isDrawing = false;
+    let pattern = [];
+    let currentPos = { x: 0, y: 0 };
 
-        // Открытие замка
-        function openLock(mode) {
-            targetMode = mode;
-            lockTitle.textContent = mode === 'G' ? "Нарисуйте букву 'Г'" : "Нарисуйте букву 'К'";
-            lockScreen.style.display = 'flex';
-            resetPattern();
+    let animTime = 0;
+    let drawProgress = 0;
+
+    // Сетка ключа 3x3
+    const gridOffsetY = 320;
+    const spacing = 100;
+    const nodes = {};
+
+    let idx = 1;
+    for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 3; col++) {
+            nodes[idx] = {
+                x: WIDTH / 2 + (col - 1) * spacing,
+                y: gridOffsetY + (row - 1) * spacing
+            };
+            idx++;
         }
+    }
 
-        // Вызов по клавиатуре (буквы Г / K)
-        window.addEventListener('keydown', (e) => {
-            const k = e.key.toLowerCase();
-            if (k === 'g' || k === 'г') openLock('G');
-            if (k === 'k' || k === 'к') openLock('K');
-        });
+    // Комбинации для буквы Г
+    const goosePatterns = [
+        [7, 4, 1, 2, 3],
+        [3, 2, 1, 4, 7],
+        [7, 1, 3],
+        [3, 1, 7]
+    ];
 
-        // Отрисовка чертежа
-        function drawGrid() {
-            ctx.strokeStyle = 'rgba(88, 166, 255, 0.08)';
-            ctx.lineWidth = 1;
-            for (let x = 0; x < canvas.width; x += 20) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-            }
-            for (let y = 0; y < canvas.height; y += 20) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-            }
-        }
+    // Комбинации для буквы К
+    const chickenPatterns = [
+        [1, 4, 7, 3, 5, 9],
+        [1, 4, 7, 2, 4, 8],
+        [1, 4, 7, 3, 4, 9],
+        [1, 7, 3, 5, 9],
+        [1, 7, 3, 9]
+    ];
 
-        function drawGoose() {
-            title.textContent = "Чертеж: Тобот-Гусь";
-            ctx.strokeStyle = '#00bfff';
-            ctx.lineWidth = 2;
+    // --- ЭКРАН БЛОКИРОВКИ ---
+    function drawLockScreen(t) {
+        ctx.fillStyle = "#191c24";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-            ctx.strokeRect(220, 200, 160, 120); // Корпус
-            ctx.strokeRect(230, 80, 70, 40);   // Голова
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#00c8ff";
+        ctx.font = "bold 24px sans-serif";
+        ctx.fillText("Нарисуйте букву 'Г' или 'К'", WIDTH / 2, 85);
 
-            // Шея
+        ctx.fillStyle = "#78828c";
+        ctx.font = "16px sans-serif";
+        ctx.fillText("на графическом ключе", WIDTH / 2, 115);
+
+        ctx.fillStyle = "#464f60";
+        ctx.font = "14px sans-serif";
+        ctx.fillText("Г — Тобот-Гусь  |  К — Тобот-Курочка", WIDTH / 2, 140);
+
+        if (pattern.length > 1) {
             ctx.beginPath();
-            ctx.moveTo(240, 200); ctx.lineTo(240, 120); ctx.lineTo(280, 120); ctx.lineTo(280, 200);
+            ctx.strokeStyle = "#00c8ff";
+            ctx.lineWidth = 8 + Math.sin(t * 5) * 1.5;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.moveTo(nodes[pattern[0]].x, nodes[pattern[0]].y);
+            for (let i = 1; i < pattern.length; i++) {
+                ctx.lineTo(nodes[pattern[i]].x, nodes[pattern[i]].y);
+            }
             ctx.stroke();
+        }
 
-            // Стальной клюв без плазмы
+        if (isDrawing && pattern.length > 0) {
+            const lastNode = nodes[pattern[pattern.length - 1]];
             ctx.beginPath();
-            ctx.moveTo(230, 95); ctx.lineTo(170, 105); ctx.lineTo(230, 115);
+            ctx.strokeStyle = "rgba(0, 200, 255, 0.6)";
+            ctx.lineWidth = 4;
+            ctx.moveTo(lastNode.x, lastNode.y);
+            ctx.lineTo(currentPos.x, currentPos.y);
+            ctx.stroke();
+        }
+
+        for (let id in nodes) {
+            const node = nodes[id];
+            const isSelected = pattern.includes(parseInt(id));
+            const pulse = isSelected ? Math.sin(t * 6) * 2 : 0;
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, (isSelected ? 24 : 20) + pulse, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? "#00c8ff" : "#282d37";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, isSelected ? 10 : 6, 0, Math.PI * 2);
+            ctx.fillStyle = isSelected ? "#ffffff" : "#78828c";
+            ctx.fill();
+        }
+    }
+
+    // --- Вспомогательная прорисовка линий ---
+    function strokePathProgress(pathFn, approxLength, progress, strokeColor, lineWidth) {
+        if (progress <= 0) return;
+        ctx.save();
+        ctx.beginPath();
+        pathFn();
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = lineWidth;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        if (progress < 1) {
+            ctx.setLineDash([approxLength, approxLength]);
+            ctx.lineDashOffset = approxLength * (1 - progress);
+        } else {
+            ctx.setLineDash([]);
+        }
+
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // --- ТОБОТ-ГУСЬ (ЛЕТАЮЩИЙ) ---
+    function drawRobotGoose(t, prog) {
+        ctx.fillStyle = "#191c24";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        const flyY = prog >= 1 ? Math.sin(t * 2.5) * 14 : 0;
+        const flyX = prog >= 1 ? Math.cos(t * 1.8) * 6 : 0;
+
+        const cx = WIDTH / 2 + flyX;
+        const cy = HEIGHT / 2 - 25 + flyY;
+
+        const pAntenna = Math.min(1, Math.max(0, prog / 0.2));
+        const pHead    = Math.min(1, Math.max(0, (prog - 0.15) / 0.35));
+        const pScreen  = Math.min(1, Math.max(0, (prog - 0.45) / 0.25));
+        const pGoose   = Math.min(1, Math.max(0, (prog - 0.65) / 0.25));
+        const pFills   = Math.min(1, Math.max(0, (prog - 0.85) / 0.15));
+
+        if (pFills > 0.5) {
+            const flameH = 15 + Math.sin(t * 15) * 8;
+            ctx.save();
+            ctx.globalAlpha = pFills;
+
+            ctx.beginPath();
+            ctx.fillStyle = "#ff8c00";
+            ctx.moveTo(cx - 70, cy + 120);
+            ctx.lineTo(cx - 60, cy + 120 + flameH);
+            ctx.lineTo(cx - 50, cy + 120);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.fillStyle = "#ff8c00";
+            ctx.moveTo(cx + 50, cy + 120);
+            ctx.lineTo(cx + 60, cy + 120 + flameH);
+            ctx.lineTo(cx + 70, cy + 120);
+            ctx.fill();
+
+            ctx.fillStyle = "#00c8ff";
+            ctx.beginPath();
+            ctx.moveTo(cx - 66, cy + 120);
+            ctx.lineTo(cx - 60, cy + 120 + flameH * 0.6);
+            ctx.lineTo(cx - 54, cy + 120);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(cx + 54, cy + 120);
+            ctx.lineTo(cx + 60, cy + 120 + flameH * 0.6);
+            ctx.lineTo(cx + 66, cy + 120);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        strokePathProgress(() => {
+            ctx.moveTo(cx - 15, cy - 140);
+            ctx.lineTo(cx, cy - 190);
+            ctx.lineTo(cx + 15, cy - 140);
+        }, 120, pAntenna, "#00c8ff", 4);
+
+        if (pAntenna > 0.5) {
+            const lightGlow = prog >= 1 ? (Math.sin(t * 6) * 0.5 + 0.5) : 0;
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy - 190, 10 + lightGlow * 4, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(0, 200, 255, ${0.4 + lightGlow * 0.5})`;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(cx, cy - 190, 8, 0, Math.PI * 2);
+            ctx.fillStyle = "#00c8ff";
+            ctx.fill();
+            ctx.restore();
+        }
+
+        const drawWing = (side) => {
+            const dir = side === 'left' ? -1 : 1;
+            ctx.beginPath();
+            ctx.moveTo(cx + dir * 140, cy - 60);
+            ctx.lineTo(cx + dir * 180, cy - 20);
+            ctx.lineTo(cx + dir * 180, cy + 80);
+            ctx.lineTo(cx + dir * 140, cy + 120);
             ctx.closePath();
-            ctx.stroke();
+        };
 
-            // Крылья и сопла
-            ctx.strokeRect(140, 220, 80, 40);
-            ctx.strokeRect(380, 220, 80, 40);
-            ctx.strokeRect(250, 320, 30, 40);
-            ctx.strokeRect(320, 320, 30, 40);
+        strokePathProgress(() => { drawWing('left'); drawWing('right'); }, 600, pHead, "#00c8ff", 3);
 
-            ctx.fillStyle = '#00bfff';
-            ctx.font = '16px monospace';
-            ctx.fillText("МОДУЛЬ: «HONK!»", 30, 40);
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#282d37";
+            drawWing('left'); ctx.fill();
+            drawWing('right'); ctx.fill();
+            ctx.strokeStyle = "#464f60";
+            ctx.lineWidth = 3;
+            drawWing('left'); ctx.stroke();
+            drawWing('right'); ctx.stroke();
+            ctx.restore();
         }
 
-        function drawChicken() {
-            title.textContent = "Чертеж: Тобот-Курочка";
-            ctx.strokeStyle = '#ff5555';
-            ctx.lineWidth = 2;
-
-            ctx.strokeRect(210, 180, 180, 140); // Корпус
-            ctx.strokeRect(250, 80, 100, 60);   // Голова
-            ctx.strokeRect(260, 140, 80, 40);   // Шея
-
-            // Гребешок
-            ctx.beginPath();
-            ctx.moveTo(270, 80); ctx.lineTo(280, 55); ctx.lineTo(300, 80); ctx.lineTo(310, 55); ctx.lineTo(330, 80);
-            ctx.stroke();
-
-            // Клюв и бородка
-            ctx.beginPath();
-            ctx.moveTo(250, 100); ctx.lineTo(210, 112); ctx.lineTo(250, 124);
+        const drawHeadPlate = () => {
+            ctx.moveTo(cx - 140, cy - 100);
+            ctx.lineTo(cx - 80, cy - 140);
+            ctx.lineTo(cx + 80, cy - 140);
+            ctx.lineTo(cx + 140, cy - 100);
+            ctx.lineTo(cx + 140, cy + 90);
+            ctx.lineTo(cx + 90, cy + 130);
+            ctx.lineTo(cx - 90, cy + 130);
+            ctx.lineTo(cx - 140, cy + 90);
             ctx.closePath();
+        };
+
+        strokePathProgress(drawHeadPlate, 1100, pHead, "#00c8ff", 4);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#2e3440";
+            ctx.beginPath(); drawHeadPlate(); ctx.fill();
+            ctx.strokeStyle = "#4c566a";
+            ctx.lineWidth = 4;
             ctx.stroke();
 
-            ctx.beginPath();
-            ctx.arc(265, 134, 7, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Крылья и лапы
-            ctx.strokeRect(150, 210, 60, 60);
-            ctx.strokeRect(390, 210, 60, 60);
-            ctx.strokeRect(250, 320, 30, 50);
-            ctx.strokeRect(320, 320, 30, 50);
-
-            ctx.fillStyle = '#ffaa55';
-            ctx.font = '16px monospace';
-            ctx.fillText("МОДУЛЬ: «CLUCK-CLUCK!»", 30, 40);
-        }
-
-        function drawBlueprint() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawGrid();
-            if (currentMode === 'G') drawGoose();
-            else drawChicken();
-        }
-
-        // --- ЛОГИКА ГРАФИЧЕСКОГО КЛЮЧА ---
-        const pCanvas = document.getElementById('pattern-canvas');
-        const pCtx = pCanvas.getContext('2d');
-
-        const points = [];
-        const size = 3;
-        const spacing = 70;
-        const offset = 50;
-
-        for (let r = 0; r < size; r++) {
-            for (let c = 0; c < size; c++) {
-                points.push({
-                    id: r * size + c + 1,
-                    x: offset + c * spacing,
-                    y: offset + r * spacing
-                });
-            }
-        }
-
-        let selected = [];
-        let isDrawing = false;
-
-        function renderPattern(mousePos = null) {
-            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-
-            // Линии
-            if (selected.length > 0) {
-                pCtx.strokeStyle = '#00bfff';
-                pCtx.lineWidth = 4;
-                pCtx.beginPath();
-                const start = points.find(p => p.id === selected[0]);
-                pCtx.moveTo(start.x, start.y);
-
-                for (let i = 1; i < selected.length; i++) {
-                    const pt = points.find(p => p.id === selected[i]);
-                    pCtx.lineTo(pt.x, pt.y);
-                }
-
-                if (mousePos && isDrawing) {
-                    pCtx.lineTo(mousePos.x, mousePos.y);
-                }
-                pCtx.stroke();
-            }
-
-            // Точки (Стиль как на скрине)
-            points.forEach(pt => {
-                const active = selected.includes(pt.id);
-
-                // Внешний темный круг
-                pCtx.beginPath();
-                pCtx.arc(pt.x, pt.y, 22, 0, Math.PI * 2);
-                pCtx.fillStyle = active ? 'rgba(0, 191, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
-                pCtx.fill();
-
-                // Внутренняя точка
-                pCtx.beginPath();
-                pCtx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
-                pCtx.fillStyle = active ? '#00bfff' : '#556070';
-                pCtx.fill();
+            const bolts = [
+                [cx - 120, cy - 90], [cx + 120, cy - 90],
+                [cx - 120, cy + 80], [cx + 120, cy + 80]
+            ];
+            bolts.forEach(([bx, by]) => {
+                ctx.beginPath();
+                ctx.arc(bx, by, 6, 0, Math.PI * 2);
+                ctx.fillStyle = "#1e222a";
+                ctx.fill();
             });
+            ctx.restore();
         }
 
-        function getMousePos(e) {
-            const rect = pCanvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
+        const drawScreenRect = () => {
+            ctx.moveTo(cx - 100, cy - 80);
+            ctx.lineTo(cx + 100, cy - 80);
+            ctx.lineTo(cx + 100, cy + 70);
+            ctx.lineTo(cx - 100, cy + 70);
+            ctx.closePath();
+        };
+
+        strokePathProgress(drawScreenRect, 680, pScreen, "#00c8ff", 3);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#0f141e";
+            ctx.beginPath(); drawScreenRect(); ctx.fill();
+            ctx.strokeStyle = "#00c8ff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
         }
 
-        function checkHit(pos) {
-            return points.find(p => Math.hypot(p.x - pos.x, p.y - pos.y) < 25);
+        const headWobble = prog >= 1 ? Math.sin(t * 3) * 3 : 0;
+        const honkOpen   = prog >= 1 ? Math.max(0, Math.sin(t * 5)) * 14 : 0;
+
+        const gx = cx - 20 + headWobble;
+        const gy = cy - 10;
+
+        strokePathProgress(() => {
+            ctx.moveTo(cx - 30, cy + 70);
+            ctx.lineTo(cx + 10, cy + 70);
+            ctx.lineTo(cx + 5 + headWobble, cy - 10);
+            ctx.lineTo(cx - 35 + headWobble, cy - 10);
+            ctx.closePath();
+        }, 300, pGoose, "#ffffff", 3);
+
+        strokePathProgress(() => {
+            ctx.arc(gx, gy, 30, 0, Math.PI * 2);
+        }, 200, pGoose, "#ffffff", 3);
+
+        strokePathProgress(() => {
+            ctx.moveTo(gx + 15, gy - 8);
+            ctx.lineTo(gx + 70, gy + 5);
+            ctx.lineTo(gx + 15, gy + 20 + honkOpen);
+            ctx.closePath();
+        }, 200, pGoose, "#ff8c00", 3);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+
+            ctx.beginPath();
+            ctx.fillStyle = "#e5e9f0";
+            ctx.moveTo(cx - 30, cy + 70);
+            ctx.lineTo(cx + 10, cy + 70);
+            ctx.lineTo(cx + 5 + headWobble, cy - 10);
+            ctx.lineTo(cx - 35 + headWobble, cy - 10);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(gx, gy, 30, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.fillStyle = "#d08770";
+            ctx.moveTo(gx + 15, gy - 8);
+            ctx.lineTo(gx + 70, gy + 5);
+            ctx.lineTo(gx + 15, gy + 10);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.fillStyle = "#bf616a";
+            ctx.moveTo(gx + 15, gy + 10);
+            ctx.lineTo(gx + 65, gy + 12 + honkOpen);
+            ctx.lineTo(gx + 15, gy + 18 + honkOpen);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(gx - 5, gy - 10, 6, 0, Math.PI * 2);
+            ctx.fillStyle = "#1e222a";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(gx - 5, gy - 10, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#00c8ff";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.strokeStyle = "#2e3440";
+            ctx.lineWidth = 4;
+            ctx.moveTo(gx - 16, gy - 20);
+            ctx.lineTo(gx + 6, gy - 14);
+            ctx.stroke();
+
+            ctx.restore();
         }
 
-        function startDraw(e) {
-            isDrawing = true;
-            selected = [];
-            const pos = getMousePos(e);
-            const hit = checkHit(pos);
-            if (hit) selected.push(hit.id);
-            renderPattern(pos);
+        if (pFills > 0.5) {
+            const honkScale = prog >= 1 ? (1 + Math.sin(t * 5) * 0.12) : (pFills - 0.5) * 2;
+            const bubbleX = cx + 55;
+            const bubbleY = cy - 60 + (prog >= 1 ? Math.sin(t * 5) * -4 : 0);
+
+            ctx.save();
+            ctx.translate(bubbleX, bubbleY);
+            ctx.scale(honkScale, honkScale);
+
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 42, 20, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 16px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("HONK!", 0, 6);
+            ctx.restore();
+
+            ctx.fillStyle = `rgba(0, 200, 255, ${pFills})`;
+            ctx.font = "bold 22px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("ТОБОТ-ГУСЬ АКТИВИРОВАН", WIDTH / 2, HEIGHT - 90);
+        }
+    }
+
+    // --- ТОБОТ-КУРОЧКА (ЛЕТАЮЩАЯ) ---
+    function drawRobotChicken(t, prog) {
+        ctx.fillStyle = "#191c24";
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        const flyY = prog >= 1 ? Math.sin(t * 3.2) * 12 : 0;
+        const flyX = prog >= 1 ? Math.cos(t * 2.1) * 8 : 0;
+
+        const cx = WIDTH / 2 + flyX;
+        const cy = HEIGHT / 2 - 20 + flyY;
+
+        const pComb   = Math.min(1, Math.max(0, prog / 0.2));
+        const pHead   = Math.min(1, Math.max(0, (prog - 0.15) / 0.35));
+        const pScreen = Math.min(1, Math.max(0, (prog - 0.45) / 0.25));
+        const pChick  = Math.min(1, Math.max(0, (prog - 0.65) / 0.25));
+        const pFills  = Math.min(1, Math.max(0, (prog - 0.85) / 0.15));
+
+        // 1. ОГНИ ТУРБИН (ОРАНЖЕВО-КРАСНЫЕ)
+        if (pFills > 0.5) {
+            const flameH = 18 + Math.sin(t * 18) * 6;
+            ctx.save();
+            ctx.globalAlpha = pFills;
+
+            ctx.fillStyle = "#ff4500";
+            ctx.beginPath();
+            ctx.moveTo(cx - 55, cy + 125);
+            ctx.lineTo(cx - 45, cy + 125 + flameH);
+            ctx.lineTo(cx - 35, cy + 125);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(cx + 35, cy + 125);
+            ctx.lineTo(cx + 45, cy + 125 + flameH);
+            ctx.lineTo(cx + 55, cy + 125);
+            ctx.fill();
+
+            ctx.fillStyle = "#ffcc00";
+            ctx.beginPath();
+            ctx.moveTo(cx - 51, cy + 125);
+            ctx.lineTo(cx - 45, cy + 125 + flameH * 0.6);
+            ctx.lineTo(cx - 39, cy + 125);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(cx + 39, cy + 125);
+            ctx.lineTo(cx + 45, cy + 125 + flameH * 0.6);
+            ctx.lineTo(cx + 51, cy + 125);
+            ctx.fill();
+
+            ctx.restore();
         }
 
-        function moveDraw(e) {
-            if (!isDrawing) return;
-            const pos = getMousePos(e);
-            const hit = checkHit(pos);
-            if (hit && !selected.includes(hit.id)) {
-                selected.push(hit.id);
+        // 2. МЕХАНИЧЕСКИЙ ГРЕБЕШОК
+        strokePathProgress(() => {
+            ctx.moveTo(cx - 35, cy - 130);
+            ctx.lineTo(cx - 20, cy - 185);
+            ctx.lineTo(cx, cy - 145);
+            ctx.lineTo(cx + 20, cy - 190);
+            ctx.lineTo(cx + 35, cy - 130);
+        }, 220, pComb, "#ff3344", 4);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#ff2244";
+            ctx.beginPath();
+            ctx.moveTo(cx - 35, cy - 130);
+            ctx.lineTo(cx - 20, cy - 185);
+            ctx.lineTo(cx, cy - 145);
+            ctx.lineTo(cx + 20, cy - 190);
+            ctx.lineTo(cx + 35, cy - 130);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 3. БРОНЕВЫЕ КРЫЛЬЯ КУРОЧКИ
+        const drawChickenWing = (side) => {
+            const dir = side === 'left' ? -1 : 1;
+            ctx.beginPath();
+            ctx.moveTo(cx + dir * 135, cy - 50);
+            ctx.lineTo(cx + dir * 175, cy);
+            ctx.lineTo(cx + dir * 160, cy + 90);
+            ctx.lineTo(cx + dir * 125, cy + 115);
+            ctx.closePath();
+        };
+
+        strokePathProgress(() => { drawChickenWing('left'); drawChickenWing('right'); }, 600, pHead, "#ffaa00", 3);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#3a2d28";
+            drawChickenWing('left'); ctx.fill();
+            drawChickenWing('right'); ctx.fill();
+            ctx.strokeStyle = "#ffaa00";
+            ctx.lineWidth = 2;
+            drawChickenWing('left'); ctx.stroke();
+            drawChickenWing('right'); ctx.stroke();
+            ctx.restore();
+        }
+
+        // 4. ТИТАНОВЫЙ КОРПУС КУРОЧКИ
+        const drawChickenBody = () => {
+            ctx.moveTo(cx - 135, cy - 90);
+            ctx.lineTo(cx - 70, cy - 130);
+            ctx.lineTo(cx + 70, cy - 130);
+            ctx.lineTo(cx + 135, cy - 90);
+            ctx.lineTo(cx + 125, cy + 85);
+            ctx.lineTo(cx + 80, cy + 125);
+            ctx.lineTo(cx - 80, cy + 125);
+            ctx.lineTo(cx - 125, cy + 85);
+            ctx.closePath();
+        };
+
+        strokePathProgress(drawChickenBody, 1100, pHead, "#ff8800", 4);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#332621";
+            ctx.beginPath(); drawChickenBody(); ctx.fill();
+            ctx.strokeStyle = "#5a433a";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            const bolts = [
+                [cx - 110, cy - 80], [cx + 110, cy - 80],
+                [cx - 105, cy + 75], [cx + 105, cy + 75]
+            ];
+            bolts.forEach(([bx, by]) => {
+                ctx.beginPath();
+                ctx.arc(bx, by, 6, 0, Math.PI * 2);
+                ctx.fillStyle = "#1e1715";
+                ctx.fill();
+            });
+            ctx.restore();
+        }
+
+        // 5. ДИСПЛЕЙ
+        const drawChickenScreen = () => {
+            ctx.moveTo(cx - 95, cy - 75);
+            ctx.lineTo(cx + 95, cy - 75);
+            ctx.lineTo(cx + 95, cy + 65);
+            ctx.lineTo(cx - 95, cy + 65);
+            ctx.closePath();
+        };
+
+        strokePathProgress(drawChickenScreen, 680, pScreen, "#ffaa00", 3);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+            ctx.fillStyle = "#1c1410";
+            ctx.beginPath(); drawChickenScreen(); ctx.fill();
+            ctx.strokeStyle = "#ffaa00";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 6. ГОЛОВА И КЛЮВ КУРОЧКИ
+        const headWobble = prog >= 1 ? Math.sin(t * 4) * 3 : 0;
+        const cluckOpen  = prog >= 1 ? Math.max(0, Math.sin(t * 6)) * 12 : 0;
+
+        const kx = cx - 10 + headWobble;
+        const ky = cy - 5;
+
+        strokePathProgress(() => {
+            ctx.arc(kx, ky, 32, 0, Math.PI * 2);
+        }, 210, pChick, "#ffffff", 3);
+
+        strokePathProgress(() => {
+            ctx.moveTo(kx + 15, gy = ky - 6);
+            ctx.lineTo(kx + 55, ky + 2);
+            ctx.lineTo(kx + 15, ky + 16 + cluckOpen);
+            ctx.closePath();
+        }, 180, pChick, "#ff8c00", 3);
+
+        if (pFills > 0) {
+            ctx.save();
+            ctx.globalAlpha = pFills;
+
+            // Голова
+            ctx.beginPath();
+            ctx.arc(kx, ky, 32, 0, Math.PI * 2);
+            ctx.fillStyle = "#f0e6df";
+            ctx.fill();
+
+            // Сережки (бородка)
+            ctx.beginPath();
+            ctx.fillStyle = "#ff2244";
+            ctx.arc(kx + 10, ky + 28, 8, 0, Math.PI * 2);
+            ctx.arc(kx + 22, ky + 28, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Верхний клюв
+            ctx.beginPath();
+            ctx.fillStyle = "#ffaa00";
+            ctx.moveTo(kx + 15, ky - 6);
+            ctx.lineTo(kx + 58, ky + 2);
+            ctx.lineTo(kx + 15, ky + 8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Нижняя челюсть клюва
+            ctx.beginPath();
+            ctx.fillStyle = "#dd7700";
+            ctx.moveTo(kx + 15, ky + 8);
+            ctx.lineTo(kx + 52, ky + 10 + cluckOpen);
+            ctx.lineTo(kx + 15, ky + 15 + cluckOpen);
+            ctx.closePath();
+            ctx.fill();
+
+            // Кибер-глаз
+            ctx.beginPath();
+            ctx.arc(kx - 5, ky - 8, 6, 0, Math.PI * 2);
+            ctx.fillStyle = "#1e1715";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(kx - 5, ky - 8, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffaa00";
+            ctx.fill();
+
+            // Суровое веко
+            ctx.beginPath();
+            ctx.strokeStyle = "#332621";
+            ctx.lineWidth = 4;
+            ctx.moveTo(kx - 15, ky - 17);
+            ctx.lineTo(kx + 5, ky - 11);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // 7. ОБЛАЧКО "CLUCK-CLUCK!" И ТЕКСТ
+        if (pFills > 0.5) {
+            const cluckScale = prog >= 1 ? (1 + Math.sin(t * 6) * 0.1) : (pFills - 0.5) * 2;
+            const bubbleX = cx + 60;
+            const bubbleY = cy - 55 + (prog >= 1 ? Math.sin(t * 6) * -4 : 0);
+
+            ctx.save();
+            ctx.translate(bubbleX, bubbleY);
+            ctx.scale(cluckScale, cluckScale);
+
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 50, 22, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 13px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("CLUCK-CLUCK!", 0, 5);
+            ctx.restore();
+
+            // Яйца-дроны в воздухе
+            if (prog >= 1) {
+                for (let i = 0; i < 2; i++) {
+                    const eggX = cx + (i === 0 ? -130 : 130) + Math.sin(t * 2 + i) * 6;
+                    const eggY = cy + 40 + Math.cos(t * 2.5 + i) * 10;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.ellipse(eggX, eggY, 10, 14, 0.2 * (i === 0 ? -1 : 1), 0, Math.PI * 2);
+                    ctx.fillStyle = "#f5e6d3";
+                    ctx.fill();
+                    ctx.strokeStyle = "#ffaa00";
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    // Сияющий сенсор
+                    ctx.beginPath();
+                    ctx.arc(eggX, eggY, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = "#ffaa00";
+                    ctx.fill();
+                    ctx.restore();
+                }
             }
-            renderPattern(pos);
+
+            ctx.fillStyle = `rgba(255, 170, 0, ${pFills})`;
+            ctx.font = "bold 22px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("ТОБОТ-КУРОЧКА АКТИВИРОВАНА", WIDTH / 2, HEIGHT - 90);
         }
+    }
 
-        function endDraw() {
-            if (!isDrawing) return;
-            isDrawing = false;
+    // --- ВВОД ---
+    function getPointerPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+    }
 
-            // Проверка узора
-            if (selected.length > 1) {
-                currentMode = targetMode;
-                drawBlueprint();
-                lockScreen.style.display = 'none';
+    function checkNodeCollision(pos) {
+        for (let id in nodes) {
+            const node = nodes[id];
+            const dist = Math.hypot(node.x - pos.x, node.y - pos.y);
+            const numId = parseInt(id);
+            if (dist < 35 && !pattern.includes(numId)) {
+                pattern.push(numId);
             }
-            resetPattern();
+        }
+    }
+
+    function checkPatternMatch(validList) {
+        return validList.some(valid => 
+            valid.length === pattern.length && 
+            valid.every((val, index) => val === pattern[index])
+        );
+    }
+
+    function handleStart(e) {
+        if (state !== "LOCK") return;
+        isDrawing = true;
+        pattern = [];
+        currentPos = getPointerPos(e);
+        checkNodeCollision(currentPos);
+    }
+
+    function handleMove(e) {
+        if (state !== "LOCK" || !isDrawing) return;
+        currentPos = getPointerPos(e);
+        checkNodeCollision(currentPos);
+    }
+
+    function handleEnd() {
+        if (state !== "LOCK" || !isDrawing) return;
+        isDrawing = false;
+
+        if (checkPatternMatch(goosePatterns)) {
+            activeRobot = "GOOSE";
+            state = "ROBOT";
+            drawProgress = 0;
+            resetBtn.style.display = "block";
+        } else if (checkPatternMatch(chickenPatterns)) {
+            activeRobot = "CHICKEN";
+            state = "ROBOT";
+            drawProgress = 0;
+            resetBtn.style.display = "block";
+        } else {
+            pattern = [];
+        }
+    }
+
+    // Клавиатурный ввод Г и К
+    window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === 'g' || key === 'г') {
+            activeRobot = "GOOSE";
+            state = "ROBOT";
+            drawProgress = 0;
+            resetBtn.style.display = "block";
+        } else if (key === 'k' || key === 'к') {
+            activeRobot = "CHICKEN";
+            state = "ROBOT";
+            drawProgress = 0;
+            resetBtn.style.display = "block";
+        }
+    });
+
+    canvas.addEventListener('mousedown', handleStart);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleStart(e); });
+    window.addEventListener('touchmove', (e) => { handleMove(e); });
+    window.addEventListener('touchend', handleEnd);
+
+    resetBtn.addEventListener('click', () => {
+        state = "LOCK";
+        pattern = [];
+        drawProgress = 0;
+        resetBtn.style.display = "none";
+    });
+
+    // --- ГЛАВНЫЙ ЦИКЛ (60 FPS) ---
+    function gameLoop() {
+        animTime += 0.03;
+
+        if (state === "LOCK") {
+            drawLockScreen(animTime);
+        } else if (state === "ROBOT") {
+            if (drawProgress < 1) {
+                drawProgress += 0.009;
+                if (drawProgress > 1) drawProgress = 1;
+            }
+
+            if (activeRobot === "GOOSE") {
+                drawRobotGoose(animTime, drawProgress);
+            } else {
+                drawRobotChicken(animTime, drawProgress);
+            }
         }
 
-        function resetPattern() {
-            selected = [];
-            renderPattern();
-        }
+        requestAnimationFrame(gameLoop);
+    }
 
-        pCanvas.addEventListener('mousedown', startDraw);
-        pCanvas.addEventListener('mousemove', moveDraw);
-        window.addEventListener('mouseup', endDraw);
+    gameLoop();
+</script>
 
-        pCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); });
-        pCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); moveDraw(e); });
-        window.addEventListener('touchend', endDraw);
-
-        // Первый запуск
-        drawBlueprint();
-        renderPattern();
-    </script>
 </body>
 </html>
