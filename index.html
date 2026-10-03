@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Летающий Тобот-Гусь, Тобот-Курочка и Птица-Титан</title>
+    <title>Летающий Тобот-Гусь, Тобот-Курочка и Интеграция Птица-Титан</title>
     <style>
         * {
             box-sizing: border-box;
@@ -102,7 +102,7 @@
         }
     }
 
-    // Комбинации для буквы Г (Гусь)
+    // Буква Г (Гусь)
     const goosePatterns = [
         [7, 4, 1, 2, 3],
         [3, 2, 1, 4, 7],
@@ -110,7 +110,7 @@
         [3, 1, 7]
     ];
 
-    // Комбинации для буквы К (Курочка)
+    // Буква К (Курочка)
     const chickenPatterns = [
         [1, 4, 7, 5, 3],
         [1, 4, 7, 5, 9],
@@ -120,10 +120,10 @@
         [3, 5, 1, 4, 7]
     ];
 
-    // Комбинации для буквы П (Птица-Титан)
+    // Буква П (Интеграция: Гусь + Курочка = Птица-Титан)
     const titanPatterns = [
-        [7, 4, 1, 2, 3, 6, 9], // Снизу вверх по левому краю, вправо, вниз по правому
-        [9, 6, 3, 2, 1, 4, 7], // В обратную сторону
+        [7, 4, 1, 2, 3, 6, 9],
+        [9, 6, 3, 2, 1, 4, 7],
         [1, 2, 3, 6, 9, 7, 4]
     ];
 
@@ -749,97 +749,97 @@
         }
     }
 
-    // --- ПТИЦА-ТИТАН ---
+    // --- ИНТЕГРАЦИЯ: ПТИЦА-ТИТАН (ГУСЬ + КУРОЧКА) ---
     function drawRobotTitan(t, prog) {
-        ctx.fillStyle = "#0d1117";
+        ctx.fillStyle = "#0f121a";
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-        const flyY = prog >= 1 ? Math.sin(t * 2.5) * 10 : 0;
-        const flyX = prog >= 1 ? Math.cos(t * 1.5) * 5 : 0;
+        const flyY = prog >= 1 ? Math.sin(t * 2.8) * 12 : 0;
+        const flyX = prog >= 1 ? Math.cos(t * 1.8) * 6 : 0;
 
         const cx = WIDTH / 2 + flyX;
-        const cy = HEIGHT / 2 + 10 + flyY;
+        const cy = HEIGHT / 2 + flyY;
 
-        const pComb   = Math.min(1, Math.max(0, prog / 0.2));
-        const pHead   = Math.min(1, Math.max(0, (prog - 0.15) / 0.35));
-        const pScreen = Math.min(1, Math.max(0, (prog - 0.45) / 0.25));
-        const pChick  = Math.min(1, Math.max(0, (prog - 0.65) / 0.25));
-        const pFills  = Math.min(1, Math.max(0, (prog - 0.85) / 0.15));
+        const pHead   = Math.min(1, Math.max(0, (prog - 0.1) / 0.35));
+        const pScreen = Math.min(1, Math.max(0, (prog - 0.4) / 0.25));
+        const pChick  = Math.min(1, Math.max(0, (prog - 0.6) / 0.25));
+        const pFills  = Math.min(1, Math.max(0, (prog - 0.8) / 0.2));
 
-        // 1. РЕАКТИВНЫЕ СОПЛА ТИТАНА
+        // 1. ДВОЙНЫЕ РЕАКТИВНЫЕ СОПЛА (Оранжевый + Красный)
         if (pFills > 0.5) {
-            const flameH = 25 + Math.sin(t * 20) * 8;
+            const flameH = 22 + Math.sin(t * 18) * 8;
             ctx.save();
             ctx.globalAlpha = pFills;
 
-            [ -70, 70 ].forEach(offX => {
-                ctx.fillStyle = "#00f0ff";
+            [-75, 75].forEach((offX, i) => {
+                ctx.fillStyle = i === 0 ? "#00c8ff" : "#ff2244";
                 ctx.beginPath();
-                ctx.moveTo(cx + offX - 15, cy + 100);
-                ctx.lineTo(cx + offX, cy + 100 + flameH);
-                ctx.lineTo(cx + offX + 15, cy + 100);
+                ctx.moveTo(cx + offX - 16, cy + 110);
+                ctx.lineTo(cx + offX, cy + 110 + flameH);
+                ctx.lineTo(cx + offX + 16, cy + 110);
                 ctx.fill();
 
                 ctx.fillStyle = "#ffffff";
                 ctx.beginPath();
-                ctx.moveTo(cx + offX - 8, cy + 100);
-                ctx.lineTo(cx + offX, cy + 100 + flameH * 0.6);
-                ctx.lineTo(cx + offX + 8, cy + 100);
+                ctx.moveTo(cx + offX - 8, cy + 110);
+                ctx.lineTo(cx + offX, cy + 110 + flameH * 0.6);
+                ctx.lineTo(cx + offX + 8, cy + 110);
                 ctx.fill();
             });
 
             ctx.restore();
         }
 
-        // 2. МОЩНЫЕ ТИТАНОВЫЕ КРЫЛЬЯ
+        // 2. БРОНИРОВАННЫЕ КРЫЛЬЯ С ПОЛОСАМИ ПЛИМУТРОКА
         const drawTitanWings = (side) => {
             const dir = side === 'left' ? -1 : 1;
             ctx.beginPath();
-            ctx.moveTo(cx + dir * 60, cy - 40);
-            ctx.lineTo(cx + dir * 190, cy - 110);
-            ctx.lineTo(cx + dir * 160, cy - 20);
-            ctx.lineTo(cx + dir * 180, cy + 20);
-            ctx.lineTo(cx + dir * 130, cy + 50);
-            ctx.lineTo(cx + dir * 70, cy + 30);
+            ctx.moveTo(cx + dir * 70, cy - 30);
+            ctx.lineTo(cx + dir * 185, cy - 90);
+            ctx.lineTo(cx + dir * 165, cy - 10);
+            ctx.lineTo(cx + dir * 180, cy + 40);
+            ctx.lineTo(cx + dir * 125, cy + 80);
+            ctx.lineTo(cx + dir * 65, cy + 50);
             ctx.closePath();
         };
 
-        strokePathProgress(() => { drawTitanWings('left'); drawTitanWings('right'); }, 800, pHead, "#00f0ff", 4);
+        strokePathProgress(() => { drawTitanWings('left'); drawTitanWings('right'); }, 900, pHead, "#00c8ff", 4);
 
         if (pFills > 0) {
             ctx.save();
             ctx.globalAlpha = pFills;
             
-            ctx.fillStyle = "#161b22";
+            ctx.fillStyle = "#222630";
             drawTitanWings('left'); ctx.fill();
             drawTitanWings('right'); ctx.fill();
 
-            ctx.strokeStyle = "#00f0ff";
+            // Полосы Плимутрока на крыльях
+            ctx.strokeStyle = "#e2e5ec";
             ctx.lineWidth = 3;
             [-1, 1].forEach(dir => {
-                ctx.beginPath();
-                ctx.moveTo(cx + dir * 80, cy - 30);
-                ctx.lineTo(cx + dir * 165, cy - 85);
-                ctx.moveTo(cx + dir * 90, cy);
-                ctx.lineTo(cx + dir * 145, cy - 10);
-                ctx.stroke();
+                for (let i = -40; i <= 30; i += 18) {
+                    ctx.beginPath();
+                    ctx.moveTo(cx + dir * 90, cy + i);
+                    ctx.lineTo(cx + dir * 150, cy + i - 15);
+                    ctx.stroke();
+                }
             });
 
-            ctx.strokeStyle = "#ffffff";
+            ctx.strokeStyle = "#00c8ff";
             ctx.lineWidth = 2;
             drawTitanWings('left'); ctx.stroke();
             drawTitanWings('right'); ctx.stroke();
             ctx.restore();
         }
 
-        // 3. ТИТАНОВЫЙ МАССИВНЫЙ КОРПУС
+        // 3. ТИТАНОВЫЙ КОРПУС С ПАНЕЛЯМИ ОБОИХ ТОБОТОВ
         const drawTitanBody = () => {
-            ctx.moveTo(cx - 70, cy - 90);
-            ctx.lineTo(cx + 70, cy - 90);
-            ctx.lineTo(cx + 90, cy - 20);
-            ctx.lineTo(cx + 60, cy + 100);
-            ctx.lineTo(cx - 60, cy + 100);
-            ctx.lineTo(cx - 90, cy - 20);
+            ctx.moveTo(cx - 75, cy - 70);
+            ctx.lineTo(cx + 75, cy - 70);
+            ctx.lineTo(cx + 95, cy - 10);
+            ctx.lineTo(cx + 65, cy + 110);
+            ctx.lineTo(cx - 65, cy + 110);
+            ctx.lineTo(cx - 95, cy - 10);
             ctx.closePath();
         };
 
@@ -848,96 +848,146 @@
         if (pFills > 0) {
             ctx.save();
             ctx.globalAlpha = pFills;
-            ctx.fillStyle = "#21262d";
+            ctx.fillStyle = "#2e3440";
             ctx.beginPath(); drawTitanBody(); ctx.fill();
 
-            ctx.strokeStyle = "#30363d";
-            ctx.lineWidth = 4;
+            // Декор Курочки
+            ctx.strokeStyle = "#ff2244";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(cx - 50, cy + 80); ctx.lineTo(cx - 20, cy + 100);
+            ctx.moveTo(cx + 50, cy + 80); ctx.lineTo(cx + 20, cy + 100);
+            ctx.stroke();
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3;
             ctx.beginPath(); drawTitanBody(); ctx.stroke();
             ctx.restore();
         }
 
-        // 4. ТИТАНОВЫЙ ЭНЕРГО-РЕАКТОР В ГРУДИ
+        // 4. ДВУХЦВЕТНЫЙ ИНТЕГРАЦИОННЫЙ РЕАКТОР В ГРУДИ
         const drawTitanReactor = () => {
-            ctx.moveTo(cx, cy - 50);
+            ctx.moveTo(cx, cy - 45);
             ctx.lineTo(cx + 40, cy - 10);
-            ctx.lineTo(cx + 25, cy + 45);
-            ctx.lineTo(cx - 25, cy + 45);
+            ctx.lineTo(cx + 25, cy + 40);
+            ctx.lineTo(cx - 25, cy + 40);
             ctx.lineTo(cx - 40, cy - 10);
             ctx.closePath();
         };
 
-        strokePathProgress(drawTitanReactor, 500, pScreen, "#00f0ff", 3);
+        strokePathProgress(drawTitanReactor, 500, pScreen, "#00c8ff", 3);
 
         if (pFills > 0) {
             ctx.save();
             ctx.globalAlpha = pFills;
-            ctx.fillStyle = "#090d16";
+            ctx.fillStyle = "#0c0e14";
             ctx.beginPath(); drawTitanReactor(); ctx.fill();
 
             const pulse = Math.sin(t * 6) * 0.2 + 0.8;
-            ctx.fillStyle = `rgba(0, 240, 255, ${pulse})`;
+            
+            // Левая половина - голубая (Гусь)
+            ctx.fillStyle = `rgba(0, 200, 255, ${pulse})`;
             ctx.beginPath();
-            ctx.arc(cx, cy - 2, 18, 0, Math.PI * 2);
+            ctx.arc(cx - 8, cy - 2, 14, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.strokeStyle = "#00f0ff";
-            ctx.lineWidth = 3;
+            // Правая половина - красная (Курочка)
+            ctx.fillStyle = `rgba(255, 34, 68, ${pulse})`;
+            ctx.beginPath();
+            ctx.arc(cx + 8, cy - 2, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = "#00c8ff";
+            ctx.lineWidth = 2.5;
             ctx.beginPath(); drawTitanReactor(); ctx.stroke();
             ctx.restore();
         }
 
-        // 5. ШЛЕМ И СТИЛИЗОВАННЫЙ КЛЮВ ТИТАНА
-        const kx = cx;
-        const ky = cy - 110;
+        // 5. ДЛИННАЯ ШЕЯ ГУСЯ + ГРЕБЕНЬ И КЛЮВ КУРОЧКИ
+        const headWobble = prog >= 1 ? Math.sin(t * 3.5) * 4 : 0;
+        const honkOpen   = prog >= 1 ? Math.max(0, Math.sin(t * 5.5)) * 12 : 0;
 
-        strokePathProgress(() => {
-            ctx.moveTo(kx - 30, ky - 10);
-            ctx.lineTo(kx - 15, ky - 50);
-            ctx.lineTo(kx, ky - 30);
-            ctx.lineTo(kx + 15, ky - 50);
-            ctx.lineTo(kx + 30, ky - 10);
-        }, 300, pComb, "#00f0ff", 3);
+        const gx = cx + headWobble;
+        const gy = cy - 100;
 
+        // Длинная шея
         strokePathProgress(() => {
-            ctx.moveTo(kx - 40, ky - 10);
-            ctx.lineTo(kx + 40, ky - 10);
-            ctx.lineTo(kx + 25, ky + 35);
-            ctx.lineTo(kx, ky + 50);
-            ctx.lineTo(kx - 25, ky + 35);
+            ctx.moveTo(cx - 20, cy - 70);
+            ctx.lineTo(gx - 15, gy + 20);
+            ctx.lineTo(gx + 15, gy + 20);
+            ctx.lineTo(cx + 20, cy - 70);
             ctx.closePath();
-        }, 400, pChick, "#ffffff", 3);
+        }, 250, pChick, "#ffffff", 3);
+
+        // Голова
+        strokePathProgress(() => {
+            ctx.arc(gx, gy, 28, 0, Math.PI * 2);
+        }, 180, pChick, "#ffffff", 3);
 
         if (pFills > 0) {
             ctx.save();
             ctx.globalAlpha = pFills;
 
-            ctx.fillStyle = "#ffb700";
+            // Заливка шеи
             ctx.beginPath();
-            ctx.moveTo(kx - 30, ky - 10);
-            ctx.lineTo(kx - 15, ky - 50);
-            ctx.lineTo(kx, ky - 30);
-            ctx.lineTo(kx + 15, ky - 50);
-            ctx.lineTo(kx + 30, ky - 10);
-            ctx.fill();
-
-            ctx.fillStyle = "#30363d";
-            ctx.beginPath();
-            ctx.moveTo(kx - 40, ky - 10);
-            ctx.lineTo(kx + 40, ky - 10);
-            ctx.lineTo(kx + 25, ky + 35);
-            ctx.lineTo(kx, ky + 50);
-            ctx.lineTo(kx - 25, ky + 35);
+            ctx.fillStyle = "#e5e9f0";
+            ctx.moveTo(cx - 20, cy - 70);
+            ctx.lineTo(gx - 15, gy + 20);
+            ctx.lineTo(gx + 15, gy + 20);
+            ctx.lineTo(cx + 20, cy - 70);
             ctx.closePath();
             ctx.fill();
 
-            ctx.fillStyle = "#00f0ff";
+            // Заливка головы
             ctx.beginPath();
-            ctx.moveTo(kx - 25, ky + 5);
-            ctx.lineTo(kx + 25, ky + 5);
-            ctx.lineTo(kx + 15, ky + 18);
-            ctx.lineTo(kx - 15, ky + 18);
+            ctx.arc(gx, gy, 28, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            // Красный гребень Курочки
+            ctx.beginPath();
+            ctx.fillStyle = "#ff1a3c";
+            ctx.moveTo(gx - 18, gy - 22);
+            ctx.lineTo(gx - 10, gy - 45);
+            ctx.lineTo(gx, gy - 32);
+            ctx.lineTo(gx + 10, gy - 48);
+            ctx.lineTo(gx + 18, gy - 28);
             ctx.closePath();
+            ctx.fill();
+
+            // Красная бородка
+            ctx.beginPath();
+            ctx.fillStyle = "#ff1a3c";
+            ctx.ellipse(gx + 10, gy + 22, 6, 12, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Оранжевый гусиный клюв
+            ctx.beginPath();
+            ctx.fillStyle = "#ff8c00";
+            ctx.moveTo(gx + 12, gy - 6);
+            ctx.lineTo(gx + 55, gy + 4);
+            ctx.lineTo(gx + 12, gy + 12);
+            ctx.closePath();
+            ctx.fill();
+
+            // Нижняя челюсть клюва
+            ctx.beginPath();
+            ctx.fillStyle = "#d08770";
+            ctx.moveTo(gx + 12, gy + 12);
+            ctx.lineTo(gx + 50, gy + 14 + honkOpen);
+            ctx.lineTo(gx + 12, gy + 20 + honkOpen);
+            ctx.closePath();
+            ctx.fill();
+
+            // Глаз тобота
+            ctx.beginPath();
+            ctx.arc(gx - 4, gy - 8, 6, 0, Math.PI * 2);
+            ctx.fillStyle = "#1e222a";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(gx - 4, gy - 8, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#00c8ff";
             ctx.fill();
 
             ctx.restore();
@@ -945,13 +995,32 @@
 
         // 6. ТЕКСТ И НАДПИСЬ
         if (pFills > 0.5) {
+            const titanScale = prog >= 1 ? (1 + Math.sin(t * 6) * 0.08) : (pFills - 0.5) * 2;
+            const bubbleX = gx + 55;
+            const bubbleY = gy - 30;
+
             ctx.save();
-            ctx.fillStyle = `rgba(0, 240, 255, ${pFills})`;
-            ctx.shadowColor = "#00f0ff";
-            ctx.shadowBlur = 12;
-            ctx.font = "bold 20px sans-serif";
+            ctx.translate(bubbleX, bubbleY);
+            ctx.scale(titanScale, titanScale);
+
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 52, 22, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            ctx.fillStyle = "#000000";
+            ctx.font = "bold 12px sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText("ПТИЦА-ТИТАН АКТИВИРОВАНА", WIDTH / 2, HEIGHT - 90);
+            ctx.fillText("HONK-CLUCK!", 0, 4);
+            ctx.restore();
+
+            ctx.save();
+            ctx.fillStyle = `rgba(0, 200, 255, ${pFills})`;
+            ctx.shadowColor = "#00c8ff";
+            ctx.shadowBlur = 10;
+            ctx.font = "bold 18px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("ИНТЕГРАЦИЯ: ПТИЦА-ТИТАН", WIDTH / 2, HEIGHT - 90);
             ctx.restore();
         }
     }
