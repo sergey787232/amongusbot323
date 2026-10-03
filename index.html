@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тобот-Чертеж с Графическим Ключом</title>
+    <title>Чертеж Тобота</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
-            background-color: #0d1117;
+            background-color: #080c14;
             color: #58a6ff;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -17,229 +20,222 @@
             margin: 0;
             user-select: none;
         }
-        h1 {
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        p {
-            color: #8b949e;
-            margin-top: 0;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .main-container {
+
+        /* Экран разблокировки (Модальное окно из скриншота) */
+        .lock-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(5, 8, 15, 0.85);
+            backdrop-filter: blur(8px);
             display: flex;
-            gap: 20px;
-            align-items: flex-start;
-            flex-wrap: wrap;
+            align-items: center;
             justify-content: center;
+            z-index: 100;
+            transition: opacity 0.3s ease;
         }
-        #canvas-container {
-            position: relative;
-            border: 2px solid #30363d;
-            box-shadow: 0 0 20px rgba(88, 166, 255, 0.2);
-            background: #011627;
-        }
-        canvas {
-            display: block;
-        }
-        /* Графический ключ */
-        .pattern-container {
-            border: 2px solid #30363d;
-            background: #011627;
-            padding: 15px;
+
+        .lock-card {
+            background: #121824;
+            border: 1px solid #1e2638;
+            border-radius: 20px;
+            width: 340px;
+            padding: 35px 25px 40px 25px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 0 15px rgba(88, 166, 255, 0.1);
-        }
-        .pattern-title {
-            color: #79c0ff;
-            font-size: 14px;
-            margin-bottom: 10px;
             text-align: center;
         }
+
+        .lock-title {
+            color: #00bfff;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .lock-subtitle {
+            color: #6e7681;
+            font-size: 15px;
+            margin-bottom: 30px;
+        }
+
         #pattern-canvas {
-            cursor: pointer;
             touch-action: none;
+            cursor: pointer;
         }
-        .controls {
-            margin-top: 15px;
+
+        /* Основной интерфейс */
+        .app-container {
             display: flex;
-            gap: 10px;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
         }
+
+        #blueprint {
+            border: 2px solid #1e2638;
+            background: #011627;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
         button {
-            background: #21262d;
+            background: #161b22;
             color: #58a6ff;
             border: 1px solid #30363d;
-            padding: 8px 16px;
-            font-family: inherit;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
+
         button:hover {
-            background: #30363d;
-            color: #79c0ff;
+            background: #21262d;
             border-color: #58a6ff;
-        }
-        .hint {
-            color: #8b949e;
-            font-size: 11px;
-            margin-top: 8px;
-            max-width: 180px;
-            line-height: 1.3;
+            color: #79c0ff;
         }
     </style>
 </head>
 <body>
 
-    <h1 id="bot-title">Чертеж Тобота</h1>
-    <p>Клавиши: <b>Г</b> / <b>К</b> | Или нарисуйте узор на графическом ключе справа</p>
-
-    <div class="main-container">
-        <div id="canvas-container">
-            <canvas id="blueprint" width="550" height="450"></canvas>
-        </div>
-
-        <div class="pattern-container">
-            <div class="pattern-title">ГРАФИЧЕСКИЙ КЛЮЧ</div>
-            <canvas id="pattern-canvas" width="180" height="180"></canvas>
-            <div class="hint">
-                • <b>Гусь:</b> Соедините точки 1→3→9 (в форме буквы Г)<br>
-                • <b>Курочка:</b> Соедините точки 1→7, затем 4→3 и 4→9
-            </div>
+    <!-- Модальный экран графического ключа -->
+    <div class="lock-overlay" id="lockScreen">
+        <div class="lock-card">
+            <div class="lock-title" id="lockTitle">Нарисуйте букву 'Г'</div>
+            <div class="lock-subtitle">на графическом ключе</div>
+            <canvas id="pattern-canvas" width="240" height="240"></canvas>
         </div>
     </div>
 
-    <div class="controls">
-        <button onclick="switchMode('G')">Тобот-Гусь (Г)</button>
-        <button onclick="switchMode('K')">Тобот-Курочка (К)</button>
+    <!-- Основная часть с чертежом -->
+    <div class="app-container">
+        <h1 id="bot-title" style="margin: 0; font-size: 24px;">Чертеж Тобота</h1>
+        <canvas id="blueprint" width="600" height="450"></canvas>
+        <div class="controls">
+            <button onclick="openLock('G')">Ввести ключ для Гуся (Г)</button>
+            <button onclick="openLock('K')">Ввести ключ для Курочки (К)</button>
+        </div>
     </div>
 
     <script>
+        // Элементы
+        const lockScreen = document.getElementById('lockScreen');
+        const lockTitle = document.getElementById('lockTitle');
         const canvas = document.getElementById('blueprint');
         const ctx = canvas.getContext('2d');
         const title = document.getElementById('bot-title');
 
-        let currentMode = 'G'; // 'G' — Гусь, 'K' — Курочка
+        let targetMode = 'G'; // 'G' или 'K'
+        let currentMode = 'G';
 
-        // --- ОБРАБОТКА КЛАВИШ ---
-        window.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-            if (key === 'g' || key === 'г') {
-                switchMode('G');
-            } else if (key === 'k' || key === 'к') {
-                switchMode('K');
-            }
-        });
-
-        function switchMode(mode) {
-            currentMode = mode;
-            draw();
+        // Открытие замка
+        function openLock(mode) {
+            targetMode = mode;
+            lockTitle.textContent = mode === 'G' ? "Нарисуйте букву 'Г'" : "Нарисуйте букву 'К'";
+            lockScreen.style.display = 'flex';
+            resetPattern();
         }
 
-        // --- ЧЕРТЕЖИ ТОБОТОВ ---
-        function drawGrid() {
-            ctx.strokeStyle = 'rgba(88, 166, 255, 0.1)';
-            ctx.lineWidth = 1;
+        // Вызов по клавиатуре (буквы Г / K)
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (k === 'g' || k === 'г') openLock('G');
+            if (k === 'k' || k === 'к') openLock('K');
+        });
 
+        // Отрисовка чертежа
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(88, 166, 255, 0.08)';
+            ctx.lineWidth = 1;
             for (let x = 0; x < canvas.width; x += 20) {
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
             }
             for (let y = 0; y < canvas.height; y += 20) {
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
-                ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
             }
         }
 
         function drawGoose() {
             title.textContent = "Чертеж: Тобот-Гусь";
-            ctx.strokeStyle = '#58a6ff';
+            ctx.strokeStyle = '#00bfff';
             ctx.lineWidth = 2;
 
-            ctx.strokeRect(195, 200, 160, 120);
+            ctx.strokeRect(220, 200, 160, 120); // Корпус
+            ctx.strokeRect(230, 80, 70, 40);   // Голова
 
+            // Шея
             ctx.beginPath();
-            ctx.moveTo(215, 200);
-            ctx.lineTo(215, 100);
-            ctx.lineTo(255, 100);
-            ctx.lineTo(255, 200);
+            ctx.moveTo(240, 200); ctx.lineTo(240, 120); ctx.lineTo(280, 120); ctx.lineTo(280, 200);
             ctx.stroke();
 
-            ctx.strokeRect(205, 60, 70, 40);
-
+            // Стальной клюв без плазмы
             ctx.beginPath();
-            ctx.moveTo(205, 75);
-            ctx.lineTo(145, 85);
-            ctx.lineTo(205, 95);
+            ctx.moveTo(230, 95); ctx.lineTo(170, 105); ctx.lineTo(230, 115);
             ctx.closePath();
             ctx.stroke();
 
-            ctx.strokeRect(115, 220, 80, 40);
-            ctx.strokeRect(355, 220, 80, 40);
+            // Крылья и сопла
+            ctx.strokeRect(140, 220, 80, 40);
+            ctx.strokeRect(380, 220, 80, 40);
+            ctx.strokeRect(250, 320, 30, 40);
+            ctx.strokeRect(320, 320, 30, 40);
 
-            ctx.strokeRect(225, 320, 30, 40);
-            ctx.strokeRect(295, 320, 30, 40);
-
-            ctx.fillStyle = '#79c0ff';
-            ctx.font = '16px Courier New';
-            ctx.fillText("ЗВУКОВОЙ МОДУЛЬ: «HONK!»", 30, 40);
+            ctx.fillStyle = '#00bfff';
+            ctx.font = '16px monospace';
+            ctx.fillText("МОДУЛЬ: «HONK!»", 30, 40);
         }
 
         function drawChicken() {
             title.textContent = "Чертеж: Тобот-Курочка";
-            ctx.strokeStyle = '#ff7b72';
+            ctx.strokeStyle = '#ff5555';
             ctx.lineWidth = 2;
 
-            ctx.strokeRect(185, 180, 180, 140);
-            ctx.strokeRect(235, 130, 80, 50);
-            ctx.strokeRect(225, 70, 100, 60);
+            ctx.strokeRect(210, 180, 180, 140); // Корпус
+            ctx.strokeRect(250, 80, 100, 60);   // Голова
+            ctx.strokeRect(260, 140, 80, 40);   // Шея
 
+            // Гребешок
             ctx.beginPath();
-            ctx.moveTo(245, 70);
-            ctx.lineTo(255, 40);
-            ctx.lineTo(275, 70);
-            ctx.lineTo(285, 40);
-            ctx.lineTo(305, 70);
+            ctx.moveTo(270, 80); ctx.lineTo(280, 55); ctx.lineTo(300, 80); ctx.lineTo(310, 55); ctx.lineTo(330, 80);
             ctx.stroke();
 
+            // Клюв и бородка
             ctx.beginPath();
-            ctx.moveTo(225, 90);
-            ctx.lineTo(185, 105);
-            ctx.lineTo(225, 115);
+            ctx.moveTo(250, 100); ctx.lineTo(210, 112); ctx.lineTo(250, 124);
             ctx.closePath();
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(240, 125, 8, 0, Math.PI * 2);
+            ctx.arc(265, 134, 7, 0, Math.PI * 2);
             ctx.stroke();
 
-            ctx.strokeRect(125, 210, 60, 60);
-            ctx.strokeRect(365, 210, 60, 60);
+            // Крылья и лапы
+            ctx.strokeRect(150, 210, 60, 60);
+            ctx.strokeRect(390, 210, 60, 60);
+            ctx.strokeRect(250, 320, 30, 50);
+            ctx.strokeRect(320, 320, 30, 50);
 
-            ctx.strokeRect(225, 320, 30, 50);
-            ctx.strokeRect(295, 320, 30, 50);
-
-            ctx.fillStyle = '#ffa657';
-            ctx.font = '16px Courier New';
-            ctx.fillText("ЗВУКОВОЙ МОДУЛЬ: «CLUCK-CLUCK!»", 30, 40);
+            ctx.fillStyle = '#ffaa55';
+            ctx.font = '16px monospace';
+            ctx.fillText("МОДУЛЬ: «CLUCK-CLUCK!»", 30, 40);
         }
 
-        function draw() {
+        function drawBlueprint() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawGrid();
-
-            if (currentMode === 'G') {
-                drawGoose();
-            } else if (currentMode === 'K') {
-                drawChicken();
-            }
+            if (currentMode === 'G') drawGoose();
+            else drawChicken();
         }
 
         // --- ЛОГИКА ГРАФИЧЕСКОГО КЛЮЧА ---
@@ -247,139 +243,122 @@
         const pCtx = pCanvas.getContext('2d');
 
         const points = [];
-        const radius = 12;
-        let isDrawing = false;
-        let selectedPoints = [];
+        const size = 3;
+        const spacing = 70;
+        const offset = 50;
 
-        // Создаем сетку точек 3x3
-        for (let row = 0; row < 3; row++) {
-            for (let col = 0; col < 3; col++) {
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
                 points.push({
-                    id: row * 3 + col + 1,
-                    x: 35 + col * 55,
-                    y: 35 + row * 55
+                    id: r * size + c + 1,
+                    x: offset + c * spacing,
+                    y: offset + r * spacing
                 });
             }
         }
 
-        function drawPatternLock(currentMousePos = null) {
+        let selected = [];
+        let isDrawing = false;
+
+        function renderPattern(mousePos = null) {
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
 
-            // Отрисовка проведенных линий
-            if (selectedPoints.length > 0) {
-                pCtx.strokeStyle = '#58a6ff';
+            // Линии
+            if (selected.length > 0) {
+                pCtx.strokeStyle = '#00bfff';
                 pCtx.lineWidth = 4;
                 pCtx.beginPath();
+                const start = points.find(p => p.id === selected[0]);
+                pCtx.moveTo(start.x, start.y);
 
-                const first = points.find(p => p.id === selectedPoints[0]);
-                pCtx.moveTo(first.x, first.y);
-
-                for (let i = 1; i < selectedPoints.length; i++) {
-                    const pt = points.find(p => p.id === selectedPoints[i]);
+                for (let i = 1; i < selected.length; i++) {
+                    const pt = points.find(p => p.id === selected[i]);
                     pCtx.lineTo(pt.x, pt.y);
                 }
 
-                if (currentMousePos && isDrawing) {
-                    pCtx.lineTo(currentMousePos.x, currentMousePos.y);
+                if (mousePos && isDrawing) {
+                    pCtx.lineTo(mousePos.x, mousePos.y);
                 }
-
                 pCtx.stroke();
             }
 
-            // Отрисовка точек
+            // Точки (Стиль как на скрине)
             points.forEach(pt => {
-                const isSelected = selectedPoints.includes(pt.id);
+                const active = selected.includes(pt.id);
 
+                // Внешний темный круг
                 pCtx.beginPath();
-                pCtx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
-                pCtx.fillStyle = isSelected ? '#58a6ff' : '#21262d';
-                pCtx.strokeStyle = isSelected ? '#79c0ff' : '#30363d';
-                pCtx.lineWidth = 2;
+                pCtx.arc(pt.x, pt.y, 22, 0, Math.PI * 2);
+                pCtx.fillStyle = active ? 'rgba(0, 191, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)';
                 pCtx.fill();
-                pCtx.stroke();
 
-                if (isSelected) {
-                    pCtx.beginPath();
-                    pCtx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-                    pCtx.fillStyle = '#ffffff';
-                    pCtx.fill();
-                }
+                // Внутренняя точка
+                pCtx.beginPath();
+                pCtx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+                pCtx.fillStyle = active ? '#00bfff' : '#556070';
+                pCtx.fill();
             });
         }
 
-        function getPos(e) {
+        function getMousePos(e) {
             const rect = pCanvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
+            return { x: clientX - rect.left, y: clientY - rect.top };
         }
 
-        function checkPointHit(pos) {
-            return points.find(pt => {
-                const dist = Math.hypot(pt.x - pos.x, pt.y - pos.y);
-                return dist < radius + 8;
-            });
+        function checkHit(pos) {
+            return points.find(p => Math.hypot(p.x - pos.x, p.y - pos.y) < 25);
         }
 
-        function startPattern(e) {
+        function startDraw(e) {
             isDrawing = true;
-            selectedPoints = [];
-            const pos = getPos(e);
-            const hit = checkPointHit(pos);
-            if (hit) {
-                selectedPoints.push(hit.id);
-            }
-            drawPatternLock(pos);
+            selected = [];
+            const pos = getMousePos(e);
+            const hit = checkHit(pos);
+            if (hit) selected.push(hit.id);
+            renderPattern(pos);
         }
 
-        function movePattern(e) {
+        function moveDraw(e) {
             if (!isDrawing) return;
-            const pos = getPos(e);
-            const hit = checkPointHit(pos);
-            if (hit && !selectedPoints.includes(hit.id)) {
-                selectedPoints.push(hit.id);
+            const pos = getMousePos(e);
+            const hit = checkHit(pos);
+            if (hit && !selected.includes(hit.id)) {
+                selected.push(hit.id);
             }
-            drawPatternLock(pos);
+            renderPattern(pos);
         }
 
-        function endPattern() {
+        function endDraw() {
             if (!isDrawing) return;
             isDrawing = false;
 
             // Проверка узора
-            const patternStr = selectedPoints.join('-');
-
-            // Узор для Гуся (Г): 1-2-3-6-9 или 1-3-9 или 1-2-3
-            if (patternStr.startsWith('1-2-3') || patternStr.startsWith('1-3') || patternStr === '1-2-3-6-9') {
-                switchMode('G');
-            } 
-            // Узор для Курочки (К): включает точку 4 или пересечения по диагонали (например, 1-4-7 или 3-5-7 или 1-7)
-            else if (selectedPoints.includes(4) || patternStr.includes('1-7') || patternStr.includes('1-4-7')) {
-                switchMode('K');
+            if (selected.length > 1) {
+                currentMode = targetMode;
+                drawBlueprint();
+                lockScreen.style.display = 'none';
             }
-
-            // Очищаем рисунок через небольшую паузу
-            setTimeout(() => {
-                selectedPoints = [];
-                drawPatternLock();
-            }, 300);
+            resetPattern();
         }
 
-        // События мыши и Touch
-        pCanvas.addEventListener('mousedown', startPattern);
-        pCanvas.addEventListener('mousemove', movePattern);
-        window.addEventListener('mouseup', endPattern);
+        function resetPattern() {
+            selected = [];
+            renderPattern();
+        }
 
-        pCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startPattern(e); });
-        pCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); movePattern(e); });
-        window.addEventListener('touchend', endPattern);
+        pCanvas.addEventListener('mousedown', startDraw);
+        pCanvas.addEventListener('mousemove', moveDraw);
+        window.addEventListener('mouseup', endDraw);
 
-        // Старт
-        draw();
-        drawPatternLock();
+        pCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); });
+        pCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); moveDraw(e); });
+        window.addEventListener('touchend', endDraw);
+
+        // Первый запуск
+        drawBlueprint();
+        renderPattern();
     </script>
 </body>
 </html>
